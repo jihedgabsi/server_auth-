@@ -2,6 +2,10 @@
 const mongoose = require('mongoose');
 
 const trajectSchema = new mongoose.Schema({
+   id: {
+    type: String,
+    unique: true
+  },
    idChauffeur: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Driver'
