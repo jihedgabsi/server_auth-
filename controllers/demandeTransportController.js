@@ -387,7 +387,7 @@ exports.getDemandesByDriveretidtraject = async (req, res, next) => {
   try {
     const { driverId,trajectId } = req.params;
 
-    const demandes = await DemandeTransport.find({ id_driver: driverId ,id_traject :trajectId })
+    const demandes = await DemandeTransport.find({ id_driver: driverId ,id_traject :trajectId ,statutsDemande :"accepted" })
       .populate("id_bagages")
       .populate("id_user", "nom prenom telephone") // Populate user info if needed
       .sort({ createdAt: -1 }); // Most recent first
