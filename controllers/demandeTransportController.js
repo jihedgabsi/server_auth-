@@ -380,6 +380,28 @@ exports.getDemandesByDriver = async (req, res, next) => {
   }
 };
 
+// @desc    Get demandes by driver ID et idtraject
+// @route   GET /api/demandes-transport/driver/:driverId/traject/:trajectId
+// @access  Private
+exports.getDemandesByDriveretidtraject = async (req, res, next) => {
+  try {
+    const { driverId,trajectId } = req.params;
+
+    const demandes = await DemandeTransport.find({ id_driver: driverId ,id_traject :trajectId })
+      .populate("id_bagages")
+      .populate("id_user", "nom prenom telephone") // Populate user info if needed
+      .sort({ createdAt: -1 }); // Most recent first
+
+    res.status(200).json({
+      success: true,
+      count: demandes.length,
+      data: demandes,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get demandes by status
 // @route   GET /api/demandes-transport/status/:status
 // @access  Private
