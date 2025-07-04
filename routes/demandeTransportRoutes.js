@@ -37,6 +37,7 @@ router.put('/:id/propose-price', proposePriceUser);
 // Filter routes
 router.get('/user/:userId', getDemandesByUser);
 router.get('/driver/:driverId', getDemandesByDriver);
+router.get('/driver/:driverId/traject/:trajectId', getDemandesByDriveretidtraject);
 router.get('/status/:status', getDemandesByStatus);
 
 ///
