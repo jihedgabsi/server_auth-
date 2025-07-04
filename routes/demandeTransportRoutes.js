@@ -5,6 +5,7 @@ const {
   getDemandeTransportById,
   updateDemandeTransport,
   deleteDemandeTransport,
+  getDemandesByDriveretidtraject,
 
   acceptProposal,
   rejectProposal,
