@@ -65,6 +65,40 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Update Driver solde
+router.put("/:id/solde", [verifyToken, isAdmin], async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { solde } = req.body;
+
+    if (typeof solde !== "number") {
+      return res.status(400).json({
+        message: "Le solde doit être un nombre."
+      });
+    }
+
+    const updatedDriver = await Driver.findByIdAndUpdate(
+      id,
+      { $set: { solde } },
+      { new: true, select: "-password" }
+    );
+
+    if (!updatedDriver) {
+      return res.status(404).json({
+        message: "Chauffeur non trouvé."
+      });
+    }
+
+    res.status(200).json(updatedDriver);
+  } catch (error) {
+    res.status(500).json({
+      message: "Erreur lors de la mise à jour du solde.",
+      error: error.message
+    });
+  }
+});
+
+
 // Get all Drivers (admin only)
 router.get("/all", [verifyToken, isAdmin], async (req, res) => {
   try {
