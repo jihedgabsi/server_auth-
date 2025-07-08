@@ -66,7 +66,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update Driver solde
-router.put("/:id/solde", [verifyToken, isAdmin], async (req, res) => {
+router.put("/:id/solde",  async (req, res) => {
   try {
     const { id } = req.params;
     const { solde } = req.body;
