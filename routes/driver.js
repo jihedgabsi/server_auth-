@@ -110,46 +110,34 @@ router.get("/all", [verifyToken, isAdmin], async (req, res) => {
 });
 
 
-router.patch('/fcm-token',  async (req, res) => {
-  // 1. Récupérer les données de la requête
-  const { fcmToken } = req.body; // Le nouveau jeton depuis le corps de la requête
-  const driverId = req.driverId; // ✨ UTILISER L'ID DU JETON, PAS DE req.params
-
-  // 2. Valider que le fcmToken est bien présent
-  if (!fcmToken) {
-    return res.status(400).json({ message: 'Le champ fcmToken est requis.' });
-  }
-
+// Update Driver solde
+router.put("/:id/fcm-token",  async (req, res) => {
   try {
-    // 3. Trouver le chauffeur par son ID (depuis le jeton) et mettre à jour son fcmToken
+    const { id } = req.params;
+    const { fcmToken } = req.body;
+
+    
+
     const updatedDriver = await Driver.findByIdAndUpdate(
-      driverId, // ✨ Sécurisé
-      { fcmToken: fcmToken },
-      { 
-        new: true, // Pour que la méthode retourne le document mis à jour
-        runValidators: true,
-        select: "-password" // Exclure le mot de passe de la réponse
-      }
+      id,
+      { $set: { fcmToken } },
+  
     );
 
-    // 4. Si aucun chauffeur n'est trouvé, cela ne devrait pas se produire si le jeton est valide
     if (!updatedDriver) {
-      return res.status(404).json({ message: 'Chauffeur non trouvé.' });
+      return res.status(404).json({
+        message: "Chauffeur non trouvé."
+      });
     }
 
-    // 5. Renvoyer une réponse de succès
-    res.status(200).json({
-      message: 'Token FCM mis à jour avec succès.',
-      driver: updatedDriver
-    });
-
+    res.status(200).json(updatedDriver);
   } catch (error) {
-    // 6. Gérer les erreurs potentielles
-    console.error("Erreur lors de la mise à jour du token FCM :", error);
-    res.status(500).json({ message: 'Erreur du serveur.' });
+    res.status(500).json({
+      message: "Erreur lors de la mise à jour du solde.",
+      error: error.message
+    });
   }
 });
-
 
 
 module.exports = router;
