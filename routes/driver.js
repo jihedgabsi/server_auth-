@@ -110,10 +110,10 @@ router.get("/all", [verifyToken, isAdmin], async (req, res) => {
 });
 
 
-router.put('/:id/fcm-token', async (req, res) => {
+router.patch('/fcm-token', verifyToken, async (req, res) => {
   // 1. Récupérer les données de la requête
-  const { id } = req.params; // L'ID du chauffeur depuis l'URL
   const { fcmToken } = req.body; // Le nouveau jeton depuis le corps de la requête
+  const driverId = req.driverId; // ✨ UTILISER L'ID DU JETON, PAS DE req.params
 
   // 2. Valider que le fcmToken est bien présent
   if (!fcmToken) {
@@ -121,32 +121,34 @@ router.put('/:id/fcm-token', async (req, res) => {
   }
 
   try {
-    // 3. Trouver le chauffeur par son ID et mettre à jour son fcmToken
+    // 3. Trouver le chauffeur par son ID (depuis le jeton) et mettre à jour son fcmToken
     const updatedDriver = await Driver.findByIdAndUpdate(
-      id,
+      driverId, // ✨ Sécurisé
       { fcmToken: fcmToken },
       { 
         new: true, // Pour que la méthode retourne le document mis à jour
-        runValidators: true // Pour s'assurer que les nouvelles données respectent le schéma
+        runValidators: true,
+        select: "-password" // Exclure le mot de passe de la réponse
       }
     );
 
-    // 4. Si aucun chauffeur n'est trouvé, renvoyer une erreur 404
+    // 4. Si aucun chauffeur n'est trouvé, cela ne devrait pas se produire si le jeton est valide
     if (!updatedDriver) {
       return res.status(404).json({ message: 'Chauffeur non trouvé.' });
     }
 
-    // 5. Renvoyer une réponse de succès avec les données mises à jour
+    // 5. Renvoyer une réponse de succès
     res.status(200).json({
       message: 'Token FCM mis à jour avec succès.',
       driver: updatedDriver
     });
 
   } catch (error) {
-    // 6. Gérer les erreurs potentielles (ex: ID invalide, erreur de base de données)
+    // 6. Gérer les erreurs potentielles
     console.error("Erreur lors de la mise à jour du token FCM :", error);
     res.status(500).json({ message: 'Erreur du serveur.' });
   }
 });
+
 
 module.exports = router;
