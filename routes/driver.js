@@ -112,29 +112,29 @@ router.get("/all", [verifyToken, isAdmin], async (req, res) => {
 
 // Update Driver solde
 router.put("/:id/fcm-token",  async (req, res) => {
-  try {
+ try {
     const { id } = req.params;
-    const { fcmToken } = req.body;
+    const { fcmToken } = req.body || {};
 
-    
+    if (!fcmToken) {
+      return res.status(400).json({ message: "Le champ fcmToken est requis." });
+    }
 
     const updatedDriver = await Driver.findByIdAndUpdate(
       id,
       { $set: { fcmToken } },
-  
+      { new: true }                    // renvoie le driver mis à jour
     );
 
     if (!updatedDriver) {
-      return res.status(404).json({
-        message: "Chauffeur non trouvé."
-      });
+      return res.status(404).json({ message: "Chauffeur non trouvé." });
     }
 
     res.status(200).json(updatedDriver);
   } catch (error) {
     res.status(500).json({
-      message: "Erreur lors de la mise à jour du solde.",
-      error: error.message
+      message: "Erreur lors de la mise à jour du FCM token.",
+      error: error.message,
     });
   }
 });
