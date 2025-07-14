@@ -74,7 +74,7 @@ router.get("/all", [verifyToken, isAdmin], async (req, res) => {
   }
 });
 
-router.patch("/:id/fcm-token", [verifyToken, isAdmin], async (req, res) => {
+router.patch("/:id/fcm-token",  async (req, res) => {
   // 1. Récupérer l'ID depuis les paramètres de l'URL et le token depuis le corps de la requête
   const { id } = req.params;
   const { fcmToken } = req.body;
