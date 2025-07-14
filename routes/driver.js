@@ -110,7 +110,7 @@ router.get("/all", [verifyToken, isAdmin], async (req, res) => {
 });
 
 
-router.patch('/:id/fcm-token', async (req, res) => {
+router.put('/:id/fcm-token', async (req, res) => {
   // 1. Récupérer les données de la requête
   const { id } = req.params; // L'ID du chauffeur depuis l'URL
   const { fcmToken } = req.body; // Le nouveau jeton depuis le corps de la requête
