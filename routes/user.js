@@ -74,46 +74,36 @@ router.get("/all", [verifyToken, isAdmin], async (req, res) => {
   }
 });
 
-router.patch("/:id/fcm-token",  async (req, res) => {
-  // 1. Récupérer l'ID depuis les paramètres de l'URL et le token depuis le corps de la requête
-  const { id } = req.params;
-  const { fcmToken } = req.body;
+// Update Driver solde
+router.put("/:id/fcm-token",  async (req, res) => {
+ try {
+    const { id } = req.params;
+    const { fcmToken } = req.body || {};
 
-  // 2. Valider que le fcmToken est bien fourni
-  if (!fcmToken) {
-    return res.status(400).json({ message: "Le champ fcmToken est requis." });
-  }
+    if (!fcmToken) {
+      return res.status(400).json({ message: "Le champ fcmToken est requis." });
+    }
 
-  try {
-    // 3. Trouver l'utilisateur par son ID et mettre à jour son fcmToken
     const updatedUser = await User.findByIdAndUpdate(
       id,
-      { fcmToken: fcmToken },
-      {
-        new: true, // Retourne le document mis à jour
-        select: "-password", // Exclut le mot de passe de la réponse
-      }
+      { $set: { fcmToken } },
+      { new: true }                    // renvoie le driver mis à jour
     );
 
-    // 4. Si aucun utilisateur n'est trouvé avec cet ID, renvoyer une erreur 404
     if (!updatedUser) {
-      return res.status(404).json({ message: "Utilisateur non trouvé." });
+      return res.status(404).json({ message: "User non trouvé." });
     }
 
-    // 5. Renvoyer une réponse de succès ✅
-    res.status(200).json({
-      message: "Token FCM mis à jour avec succès par l'administrateur.",
-      user: updatedUser,
-    });
+    res.status(200).json(updatedUser);
   } catch (error) {
-    // 6. Gérer les erreurs (ex: ID invalide, erreur de base de données)
-    console.error("Erreur lors de la mise à jour du token FCM:", error);
-    // Gérer le cas où l'ID n'est pas un ObjectId valide
-    if (error.name === 'CastError') {
-      return res.status(400).json({ message: "Format de l'ID utilisateur invalide." });
-    }
-    res.status(500).json({ message: "Erreur du serveur." });
+    res.status(500).json({
+      message: "Erreur lors de la mise à jour du FCM token.",
+      error: error.message,
+    });
   }
 });
+
+
+
 
 module.exports = router;
