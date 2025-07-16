@@ -14,6 +14,8 @@ const villeRoutes = require('./routes/villeRoutes');
 const baggageRoutes = require('./routes/baggageRoutes');
 const demandeTransportRoutes = require('./routes/demandeTransportRoutes');
 const commissionRoutes = require("./routes/Commission");
+const commissionRoutes = require("./routes/Commission");
+const updateRoutes = require('./routes/updateConfig')
 const app = express();
 
 // Middleware
@@ -43,6 +45,8 @@ app.use('/api/villes', villeRoutes);
 app.use('/api/baggage', baggageRoutes);
 app.use('/api/demandes-transport', demandeTransportRoutes);
 app.use('/api/commission', commissionRoutes);
+app.use('/api/updates', updateRoutes);
+
 
 // Simple route for testing
 app.get('/', (req, res) => {
