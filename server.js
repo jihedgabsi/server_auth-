@@ -14,7 +14,6 @@ const villeRoutes = require('./routes/villeRoutes');
 const baggageRoutes = require('./routes/baggageRoutes');
 const demandeTransportRoutes = require('./routes/demandeTransportRoutes');
 const commissionRoutes = require("./routes/Commission");
-const commissionRoutes = require("./routes/Commission");
 const updateRoutes = require('./routes/updateConfig');
 const airportport = require('./routes/airportport');
 const app = express();
