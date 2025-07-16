@@ -15,13 +15,15 @@ const baggageRoutes = require('./routes/baggageRoutes');
 const demandeTransportRoutes = require('./routes/demandeTransportRoutes');
 const commissionRoutes = require("./routes/Commission");
 const commissionRoutes = require("./routes/Commission");
-const updateRoutes = require('./routes/updateConfig')
+const updateRoutes = require('./routes/updateConfig');
+const airportport = require('./routes/airportport');
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 
 
 
@@ -46,6 +48,7 @@ app.use('/api/baggage', baggageRoutes);
 app.use('/api/demandes-transport', demandeTransportRoutes);
 app.use('/api/commission', commissionRoutes);
 app.use('/api/updates', updateRoutes);
+app.use('/api/airportport', airportport);
 
 
 // Simple route for testing
