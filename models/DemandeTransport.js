@@ -35,6 +35,12 @@ const demandeTransportSchema = new mongoose.Schema({
   required: false,
 },
 
+    portDepart: {
+    type: String,
+  },
+  portDarriver: {
+    type: String,
+  },
     
   id_traject: {
     
