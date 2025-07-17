@@ -30,7 +30,7 @@ const demandeTransportSchema = new mongoose.Schema({
 
   statusLivraison: {
   type: String,
-  enum: ['pending', 'payé', 'collecté', 'en dépot', 'en livraison', 'livré'],
+  enum: ['pending', 'payé', 'collecté', 'aeroportdepart','aeroportarrive', 'en livraison', 'livré'],
   default: 'pending',
   required: false,
 },
