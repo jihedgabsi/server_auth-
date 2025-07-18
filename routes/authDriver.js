@@ -41,133 +41,83 @@ const generateVerificationCode = (length) => {
 
 // Register a new Driver
 router.post('/signup', async (req, res) => {
-  try {
-    // 1. Valider les champs de la requête
-    if (!req.body.username || !req.body.email || !req.body.password || !req.body.phoneNumber) {
-      return res.status(400).json({ message: 'Tous les champs sont requis (username, email, password, phoneNumber).' });
-    }
 
-    // 2. Chercher un utilisateur existant par email ou nom d'utilisateur
-    const existingUser = await Driver.findOne({
-      $or: [
-        { email: req.body.email },
-        
-      ]
-    });
+  try {
+    // Validate request
+    if (!req.body.username || !req.body.email || !req.body.password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
 
-    // 3. Gérer le cas où l'utilisateur existe déjà
-    if (existingUser) {
-      // Cas A: L'utilisateur existe et son compte est déjà vérifié
-      console.log('Valeur de isVerified:', existingUser.isVerified, '| Type:', typeof existingUser.isVerified);
-      if (existingUser.isVerified) {
-        return res.status(409).json({ message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà et est vérifié.' });
-      } 
-      
-      // Cas B: L'utilisateur existe mais n'est PAS vérifié (C'est ici que la nouvelle logique est ajoutée)
-      else {
-        console.log(`L'utilisateur ${existingUser.username} existe mais n'est pas vérifié. Envoi d'un nouveau code.`);
+    // Check for existing user
 
-        // Générer un nouveau code de vérification
-        const newVerificationCode = generateVerificationCode(config.verificationCodeLength);
-        
-        // Mettre à jour l'utilisateur avec le nouveau code et la nouvelle date d'expiration
-        existingUser.verificationCode = newVerificationCode;
-        existingUser.verificationCodeExpires = Date.now() + config.verificationCodeExpiry;
-        await existingUser.save();
+    const existingUser = await Driver.findOne({
+      $or: [
+        { email: req.body.email },
 
-        // Envoyer le nouveau code par email
-        await sendEmail({
-          to: existingUser.email,
-          subject: 'Nouveau Code de Vérification',
-          text: `Votre nouveau code de vérification est : ${newVerificationCode}. Il expirera dans 1 heure.`,
-          html: `
-            <h1>Vérification de votre compte</h1>
-            <p>Quelqu'un a tenté de s'inscrire avec votre email. Voici un nouveau code de vérification :</p>
-            <p><strong>${newVerificationCode}</strong></p>
-            <p>Ce code expirera dans 1 heure.</p>
-          `
-        });
+        { username: req.body.username }
+      ]
+    });
+    if (existingUser) {
+      // ✅ Vérifier si l'utilisateur est déjà vérifié
+      if (existingUser.isVerified) {
+        return res.status(400).json({ message: 'User already exists and is verified' });
+      } else {
+        return res.status(403).json({ 
+          message: 'User already exists but not verified. Please verify your account.',
+          userId: existingUser._id
+        });
+      }
+    }
+    // Generate verification code
+    const verificationCode = generateVerificationCode(config.verificationCodeLength);
+    // Create new user
 
-        // Envoyer le nouveau code par WhatsApp
-        const cleanPhoneNumber = existingUser.phoneNumber.startsWith('+')
-          ? existingUser.phoneNumber.substring(1)
-          : existingUser.phoneNumber;
-
-        try {
-          await axios.post(`${config.whatsappApi.baseUrl}/send`, {
-            phone: cleanPhoneNumber,
-            message: `Votre nouveau code de vérification est : ${newVerificationCode}`
-          }, {
-            headers: { 'Content-Type': 'application/json' }
-          });
-        } catch (whatsappError) {
-          console.error('Erreur lors de l\'envoi WhatsApp pour un utilisateur existant:', whatsappError.message);
-          // On ne bloque pas le processus si WhatsApp échoue, l'email a déjà été envoyé.
-        }
-
-        // Renvoyer une réponse indiquant qu'un nouveau code a été envoyé
-        return res.status(200).json({
-          message: 'Ce compte existe déjà mais n\'est pas vérifié. Un nouveau code a été envoyé par email et WhatsApp.',
-          userId: existingUser._id
-        });
-      }
-    }
-
-    // 4. Si l'utilisateur n'existe pas, créer un nouveau compte
-    console.log(`Création d'un nouvel utilisateur : ${req.body.username}`);
-    const verificationCode = generateVerificationCode(config.verificationCodeLength);
+    const driver = new Driver({
+      username: req.body.username,
+      email: req.body.email,
+      password: req.body.password,
+      phoneNumber: req.body.phoneNumber,
+      roles: req.body.roles || ['user'],
+      verificationCode: verificationCode,
+      verificationCodeExpires: Date.now() + config.verificationCodeExpiry
+    });
+    // Save user
+    await driver.save();
+    // Send verification email
     
-    const driver = new Driver({
-      username: req.body.username,
-      email: req.body.email,
-      password: req.body.password, // Le mot de passe sera haché par le pre-save hook dans le modèle
-      phoneNumber: req.body.phoneNumber,
-      roles: req.body.roles || ['user'],
-      verificationCode: verificationCode,
-      verificationCodeExpires: Date.now() + config.verificationCodeExpiry,
-      isVerified: false
-    });
+    await sendEmail({
+      to: driver.email,
+      subject: 'Email Verification',
+      text: `Your verification code is: ${verificationCode}. It will expire in 1 hour.`,
+      html: `
+        <h1>Email Verification</h1>
+        <p>Your verification code is: <strong>${verificationCode}</strong></p>
+        <p>It will expire in 1 hour.</p>
+      `
+    });
+   const cleanPhoneNumber = driver.phoneNumber.startsWith('+')
+  ? driver.phoneNumber.substring(1)
+  : driver.phoneNumber;
+try {
+  await axios.post(`${config.whatsappApi.baseUrl}/send`, {
+    phone: cleanPhoneNumber,
+    message: `Votre code de vérification est : ${verificationCode}`
+  }, {
+    headers: { 'Content-Type': 'application/json' }
+  });
+} catch (whatsappError) {
+  console.error('Erreur WhatsApp:', whatsappError.message);
+}
 
-    await driver.save();
+    res.status(201).json({ 
+      message: 'User registered successfully! Please check your email for verification code.',
+      userId: driver._id
+    });
 
-    // 5. Envoyer l'email de vérification initial
-    await sendEmail({
-      to: driver.email,
-      subject: 'Bienvenue ! Vérifiez votre email',
-      text: `Votre code de vérification est : ${verificationCode}. Il expirera dans 1 heure.`,
-      html: `
-        <h1>Bienvenue !</h1>
-        <p>Merci de vous être inscrit. Votre code de vérification est : <strong>${verificationCode}</strong></p>
-        <p>Il expirera dans 1 heure.</p>
-      `
-    });
-    
-    // 6. Envoyer le code de vérification initial par WhatsApp
-    const cleanPhoneNumber = driver.phoneNumber.startsWith('+')
-      ? driver.phoneNumber.substring(1)
-      : driver.phoneNumber;
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 
-    try {
-      await axios.post(`${config.whatsappApi.baseUrl}/send`, {
-        phone: cleanPhoneNumber,
-        message: `Votre code de vérification est : ${verificationCode}`
-      }, {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } catch (whatsappError) {
-      console.error('Erreur lors de l\'envoi WhatsApp pour un nouvel utilisateur:', whatsappError.message);
-    }
-
-    // 7. Renvoyer une réponse de succès pour la nouvelle inscription
-    res.status(201).json({
-      message: 'Utilisateur enregistré avec succès ! Veuillez consulter vos emails et WhatsApp pour le code de vérification.',
-      userId: driver._id
-    });
-
-  } catch (error) {
-    console.error("Erreur lors de l'inscription :", error);
-    res.status(500).json({ message: "Une erreur interne est survenue.", error: error.message });
-  }
 });
 //==================================================================================================
 // Login Driver
