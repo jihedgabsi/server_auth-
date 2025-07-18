@@ -51,7 +51,7 @@ router.post('/signup', async (req, res) => {
     const existingUser = await Driver.findOne({
       $or: [
         { email: req.body.email },
-        { username: req.body.username }
+        
       ]
     });
 
