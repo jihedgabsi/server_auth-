@@ -53,7 +53,7 @@ router.post('/signup', async (req, res) => {
       $or: [
         { email: req.body.email },
 
-        { username: req.body.username }
+        { phoneNumber: req.body.phoneNumber }
       ]
     });
 
