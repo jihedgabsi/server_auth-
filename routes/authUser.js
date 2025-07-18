@@ -49,17 +49,68 @@ router.post('/signup', async (req, res) => {
     const existingUser = await User.findOne({
       $or: [
         { email: req.body.email },
-        { username: req.body.username }
+        { phoneNumber: req.body.phoneNumber }
       ]
     });
 
     if (existingUser) {
-      return res.status(400).json({ message: 'Username or email already in use' });
+      // Cas A: L'utilisateur existe et son compte est déjà vérifié
+      if (existingUser.isVerified) {
+        return res.status(409).json({ message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà et est vérifié.' });
+      }
+
+      // Cas B: L'utilisateur existe mais n'est PAS vérifié
+      else {
+        console.log(`L'utilisateur ${existingUser.username} existe mais n'est pas vérifié. Envoi d'un nouveau code.`);
+
+        // Générer un nouveau code de vérification
+        const newVerificationCode = generateVerificationCode(config.verificationCodeLength);
+
+        // Mettre à jour l'utilisateur avec le nouveau code et la nouvelle date d'expiration
+        existingUser.verificationCode = newVerificationCode;
+        existingUser.verificationCodeExpires = Date.now() + config.verificationCodeExpiry;
+        await existingUser.save();
+
+        // Envoyer le nouveau code par email
+        await sendEmail({
+          to: existingUser.email,
+          subject: 'Nouveau Code de Vérification',
+          text: `Votre nouveau code de vérification est : ${newVerificationCode}. Il expirera dans 1 heure.`,
+          html: `
+            <h1>Vérification de votre compte</h1>
+            <p>Quelqu'un a tenté de s'inscrire avec votre email. Voici un nouveau code de vérification :</p>
+            <p><strong>${newVerificationCode}</strong></p>
+            <p>Ce code expirera dans 1 heure.</p>
+          `
+        });
+
+        // Envoyer le nouveau code par WhatsApp
+        const cleanPhoneNumber = existingUser.phoneNumber.startsWith('+')
+          ? existingUser.phoneNumber.substring(1)
+          : existingUser.phoneNumber;
+
+        try {
+          await axios.post(`${config.whatsappApi.baseUrl}/send`, {
+            phone: cleanPhoneNumber,
+            message: `Votre nouveau code de vérification est : ${newVerificationCode}`
+          }, {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (whatsappError) {
+          console.error('Erreur lors de l\'envoi WhatsApp pour un utilisateur existant:', whatsappError.message);
+        }
+
+        // Renvoyer une réponse indiquant qu'un nouveau code a été envoyé
+        return res.status(201).json({
+          message: 'Ce compte existe déjà mais n\'est pas vérifié. Un nouveau code a été envoyé par email et WhatsApp.',
+          userId: existingUser._id
+        });
+      }
     }
 
     // Generate verification code
     const verificationCode = generateVerificationCode(config.verificationCodeLength);
-    
+
     // Create new user
     const user = new User({
       username: req.body.username,
@@ -86,7 +137,22 @@ router.post('/signup', async (req, res) => {
       `
     });
 
-    res.status(201).json({ 
+    const cleanPhoneNumber = driver.phoneNumber.startsWith('+')
+      ? driver.phoneNumber.substring(1)
+      : driver.phoneNumber;
+    try {
+      await axios.post(`${config.whatsappApi.baseUrl}/send`, {
+        phone: cleanPhoneNumber,
+        message: `Votre code de vérification est : ${verificationCode}`
+      }, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (whatsappError) {
+      console.error('Erreur WhatsApp:', whatsappError.message);
+    }
+
+
+    res.status(201).json({
       message: 'User registered successfully! Please check your email for verification code.',
       userId: user._id
     });
@@ -100,26 +166,26 @@ router.post('/signin', async (req, res) => {
   try {
     // Find user by email
     const user = await User.findOne({ email: req.body.email });
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     // Check password
     const passwordIsValid = await user.comparePassword(req.body.password);
-    
+
     if (!passwordIsValid) {
       return res.status(401).json({ message: 'Invalid password' });
     }
 
     // Check if user email is verified
     if (!user.isVerified) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         message: 'Email not verified. Please verify your email first.',
         userId: user._id
       });
     }
- // Update FCM token if provided in the request
+    // Update FCM token if provided in the request
     if (req.body.fcmToken) {
       user.fcmToken = req.body.fcmToken;
       await user.save();
@@ -136,7 +202,7 @@ router.post('/signin', async (req, res) => {
       id: user._id,
       username: user.username,
       email: user.email,
-      phoneNumber:user.phoneNumber,
+      phoneNumber: user.phoneNumber,
       roles: user.roles,
       accessToken: token
     });
@@ -209,7 +275,7 @@ router.post('/resend-verification', async (req, res) => {
 
     // Generate new verification code
     const verificationCode = generateVerificationCode(config.verificationCodeLength);
-    
+
     // Update user with new verification code
     user.verificationCode = verificationCode;
     user.verificationCodeExpires = Date.now() + config.verificationCodeExpiry;
@@ -227,7 +293,18 @@ router.post('/resend-verification', async (req, res) => {
       `
     });
 
-    res.status(200).json({ 
+    try {
+  await axios.post(`${config.whatsappApi.baseUrl}/send`, {
+    phone: cleanPhoneNumber,
+    message: `Votre code de vérification est : ${verificationCode}`
+  }, {
+    headers: { 'Content-Type': 'application/json' }
+  });
+} catch (whatsappError) {
+  console.error('Erreur WhatsApp:', whatsappError.message);
+}
+
+    res.status(200).json({
       message: 'Verification code resent successfully! Please check your email.',
       userId: user._id
     });
@@ -239,25 +316,25 @@ router.post('/resend-verification', async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
     }
 
     // Find user by email
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User with this email does not exist' });
     }
 
     // Generate reset token
     const resetToken = crypto.randomBytes(20).toString('hex');
-    
+
     // Set token and expiry on user document
     user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     user.resetPasswordExpires = Date.now() + config.resetPasswordExpiry;
-    
+
     await user.save();
 
     // Create reset URL
@@ -291,7 +368,7 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
-    
+
     res.status(500).json({ message: 'Could not send reset email' });
   }
 });
@@ -301,7 +378,7 @@ router.post('/reset-password/:token', async (req, res) => {
   try {
     const { password } = req.body;
     const { token } = req.params;
-    
+
     if (!password) {
       return res.status(400).json({ message: 'Password is required' });
     }
@@ -323,7 +400,7 @@ router.post('/reset-password/:token', async (req, res) => {
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
-    
+
     await user.save();
 
     res.status(200).json({ message: 'Password reset successful' });
@@ -337,7 +414,7 @@ router.post('/reset-password/:token', async (req, res) => {
 router.get('/validate-reset-token/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    
+
     // Hash the token from URL
     const resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
 
@@ -361,30 +438,30 @@ router.get('/validate-reset-token/:token', async (req, res) => {
 router.post('/send-reset-code', async (req, res) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
     }
 
     // Find Driver by email
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User with this email does not exist' });
     }
 
     // Generate 6-digit verification code
     const resetCode = generateVerificationCode(6);
-    
+
     // Set code and expiry on Driver document (expires in 15 minutes)
-    User.resetPasswordCode = resetCode;
-    User.resetPasswordExpires = Date.now() + (15 * 60 * 1000); // 15 minutes
-    
-    await User.save();
+    user.resetPasswordCode = resetCode;
+    user.resetPasswordExpires = Date.now() + (15 * 60 * 1000); // 15 minutes
+
+    await user.save();
 
     // Send email with verification code
     await sendEmail({
-      to: User.email,
+      to: user.email,
       subject: 'Password Reset Verification Code',
       text: `Your password reset verification code is: ${resetCode}\n\nThis code will expire in 15 minutes.\n\nIf you didn't request this, please ignore this email.`,
       html: `
@@ -406,44 +483,44 @@ router.post('/send-reset-code', async (req, res) => {
     res.status(200).json({ message: 'Verification code sent successfully' });
   } catch (error) {
     console.error('Send reset code error:', error);
-    
+
     // Clean up on error
     if (error.user) {
       error.user.resetPasswordCode = undefined;
       error.user.resetPasswordExpires = undefined;
       await error.user.save();
     }
-    
+
     res.status(500).json({ message: 'Could not send verification code' });
   }
 });
 router.post('/reset-password-with-code', async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
-    
+
     if (!email || !code || !newPassword) {
-      return res.status(400).json({ 
-        message: 'Email, verification code, and new password are required' 
+      return res.status(400).json({
+        message: 'Email, verification code, and new password are required'
       });
     }
 
     // Validate password strength
     if (newPassword.length < 8) {
-      return res.status(400).json({ 
-        message: 'Password must be at least 8 characters long' 
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters long'
       });
     }
 
     // Find driver with matching email and code
-    const driver = await Driver.findOne({ 
+    const driver = await Driver.findOne({
       email,
       resetPasswordCode: code,
       resetPasswordExpires: { $gt: Date.now() }
     });
 
     if (!driver) {
-      return res.status(400).json({ 
-        message: 'Invalid or expired verification code' 
+      return res.status(400).json({
+        message: 'Invalid or expired verification code'
       });
     }
 
@@ -451,7 +528,7 @@ router.post('/reset-password-with-code', async (req, res) => {
     driver.password = newPassword; // This will be hashed by the pre-save hook in your model
     driver.resetPasswordCode = undefined;
     driver.resetPasswordExpires = undefined;
-    
+
     await driver.save();
 
     // Send confirmation email
@@ -475,8 +552,8 @@ router.post('/reset-password-with-code', async (req, res) => {
       `
     });
 
-    res.status(200).json({ 
-      message: 'Password reset successfully' 
+    res.status(200).json({
+      message: 'Password reset successfully'
     });
   } catch (error) {
     console.error('Reset password with code error:', error);
@@ -484,7 +561,7 @@ router.post('/reset-password-with-code', async (req, res) => {
   }
 });
 //====================================================
-router.put('/:id/update-profile',  async (req, res) => {
+router.put('/:id/update-profile', async (req, res) => {
   try {
     const { username, email, phoneNumber } = req.body;
     const userId = req.params.id; // From URL parameter
@@ -517,22 +594,22 @@ router.put('/:id/update-profile',  async (req, res) => {
 
     // Prepare update object
     const updateData = {};
-    
+
     // Validate and add username if provided
     if (username && username.trim()) {
       // Check if username already exists (excluding current user)
-      const existingUser = await User.findOne({ 
-        username: username.trim(), 
-        _id: { $ne: userId } 
+      const existingUser = await User.findOne({
+        username: username.trim(),
+        _id: { $ne: userId }
       });
-      
+
       if (existingUser) {
         return res.status(400).json({
           success: false,
           message: 'Username already exists.'
         });
       }
-      
+
       updateData.username = username.trim();
     }
 
@@ -548,18 +625,18 @@ router.put('/:id/update-profile',  async (req, res) => {
       }
 
       // Check if email already exists (excluding current user)
-      const existingUser = await User.findOne({ 
-        email: email.trim().toLowerCase(), 
-        _id: { $ne: userId } 
+      const existingUser = await User.findOne({
+        email: email.trim().toLowerCase(),
+        _id: { $ne: userId }
       });
-      
+
       if (existingUser) {
         return res.status(400).json({
           success: false,
           message: 'Email already exists.'
         });
       }
-      
+
       updateData.email = email.trim().toLowerCase();
       // Reset email verification if email is changed
       updateData.isVerified = false;
@@ -575,7 +652,7 @@ router.put('/:id/update-profile',  async (req, res) => {
           message: 'Invalid phone number format.'
         });
       }
-      
+
       updateData.phoneNumber = phoneNumber.trim();
     }
 
