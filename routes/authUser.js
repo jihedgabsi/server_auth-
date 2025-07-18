@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const config = require('../config/config');
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 const router = express.Router();
 // Helper function to send email
 const sendEmail = async (options) => {
