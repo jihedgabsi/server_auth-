@@ -59,7 +59,7 @@ router.post('/signup', async (req, res) => {
     if (existingUser) {
       // Cas A: L'utilisateur existe et son compte est déjà vérifié
       if (existingUser.isVerified) {
-        return res.status(409).json({ message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà et est vérifié.' });
+        return res.status(409).json({ message: existingUser.isVerified });
       } 
       
       // Cas B: L'utilisateur existe mais n'est PAS vérifié (C'est ici que la nouvelle logique est ajoutée)
