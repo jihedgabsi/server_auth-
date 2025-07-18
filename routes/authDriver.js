@@ -88,16 +88,19 @@ router.post('/signup', async (req, res) => {
       `
     });
 
-    try {
+   const cleanPhoneNumber = driver.phoneNumber.startsWith('+')
+  ? driver.phoneNumber.substring(1)
+  : driver.phoneNumber;
+
+try {
   await axios.post(`${config.whatsappApi.baseUrl}/send`, {
-    phone: driver.phoneNumber,
+    phone: cleanPhoneNumber,
     message: `Votre code de vérification est : ${verificationCode}`
   }, {
     headers: { 'Content-Type': 'application/json' }
   });
 } catch (whatsappError) {
-  console.error('Erreur lors de l’envoi du message WhatsApp:', whatsappError.message);
-  // Optionnel : continuez même si WhatsApp échoue
+  console.error('Erreur WhatsApp:', whatsappError.message);
 }
 
     res.status(201).json({ 
@@ -205,7 +208,7 @@ router.post('/verify-email', async (req, res) => {
 // Resend verification code
 router.post('/resend-verification', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email,phoneNumber } = req.body;
 
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
@@ -242,6 +245,21 @@ router.post('/resend-verification', async (req, res) => {
         <p>It will expire in 1 hour.</p>
       `
     });
+
+     const cleanPhoneNumber = phoneNumber.startsWith('+')
+  ? phoneNumber.substring(1)
+  : phoneNumber;
+
+try {
+  await axios.post(`${config.whatsappApi.baseUrl}/send`, {
+    phone: cleanPhoneNumber,
+    message: `Votre code de vérification est : ${verificationCode}`
+  }, {
+    headers: { 'Content-Type': 'application/json' }
+  });
+} catch (whatsappError) {
+  console.error('Erreur WhatsApp:', whatsappError.message);
+}
 
     res.status(200).json({ 
       message: 'Verification code resent successfully! Please check your email.',
