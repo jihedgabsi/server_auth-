@@ -106,7 +106,7 @@ router.post('/signup', async (req, res) => {
         }
 
         // Renvoyer une réponse indiquant qu'un nouveau code a été envoyé
-        return res.status(200).json({
+        return res.status(201).json({
           message: 'Ce compte existe déjà mais n\'est pas vérifié. Un nouveau code a été envoyé par email et WhatsApp.',
           userId: existingUser._id
         });
