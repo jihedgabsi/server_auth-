@@ -138,9 +138,9 @@ router.post('/signup', async (req, res) => {
       `
     });
 
-    const cleanPhoneNumber = driver.phoneNumber.startsWith('+')
-      ? driver.phoneNumber.substring(1)
-      : driver.phoneNumber;
+    const cleanPhoneNumber = user.phoneNumber.startsWith('+')
+      ? user.phoneNumber.substring(1)
+      : user.phoneNumber;
     try {
       await axios.post(`${config.whatsappApi.baseUrl}/send`, {
         phone: cleanPhoneNumber,
@@ -513,7 +513,7 @@ router.post('/reset-password-with-code', async (req, res) => {
     }
 
     // Find driver with matching email and code
-    const driver = await Driver.findOne({
+    const driver = await User.findOne({
       email,
       resetPasswordCode: code,
       resetPasswordExpires: { $gt: Date.now() }
