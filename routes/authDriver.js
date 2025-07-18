@@ -41,84 +41,129 @@ const generateVerificationCode = (length) => {
 
 // Register a new Driver
 router.post('/signup', async (req, res) => {
+  try {
+    // Validate request
+    if (!req.body.username || !req.body.email || !req.body.password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
 
-  try {
-    // Validate request
-    if (!req.body.username || !req.body.email || !req.body.password) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
+    // Check for existing user
 
-    // Check for existing user
+    const existingUser = await Driver.findOne({
+      $or: [
+        { email: req.body.email },
 
-    const existingUser = await Driver.findOne({
-      $or: [
-        { email: req.body.email },
+        { username: req.body.username }
+      ]
+    });
 
-        { username: req.body.username }
-      ]
-    });
-    if (existingUser) {
-      // ✅ Vérifier si l'utilisateur est déjà vérifié
-      if (existingUser.isVerified) {
-        return res.status(400).json({ message: 'User already exists and is verified' });
-      } else {
-        return res.status(403).json({ 
-          message: 'User already exists but not verified. Please verify your account.',
-          userId: existingUser._id
-        });
-      }
-    }
-    // Generate verification code
-    const verificationCode = generateVerificationCode(config.verificationCodeLength);
-    // Create new user
+    // 3. Gérer le cas où l'utilisateur existe déjà
+    if (existingUser) {
+      // Cas A: L'utilisateur existe et son compte est déjà vérifié
+      if (existingUser.isVerified) {
+        return res.status(409).json({ message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà et est vérifié.' });
+      }
 
-    const driver = new Driver({
-      username: req.body.username,
-      email: req.body.email,
-      password: req.body.password,
-      phoneNumber: req.body.phoneNumber,
-      roles: req.body.roles || ['user'],
-      verificationCode: verificationCode,
-      verificationCodeExpires: Date.now() + config.verificationCodeExpiry
-    });
-    // Save user
-    await driver.save();
-    // Send verification email
-    
-    await sendEmail({
-      to: driver.email,
-      subject: 'Email Verification',
-      text: `Your verification code is: ${verificationCode}. It will expire in 1 hour.`,
-      html: `
-        <h1>Email Verification</h1>
-        <p>Your verification code is: <strong>${verificationCode}</strong></p>
-        <p>It will expire in 1 hour.</p>
-      `
-    });
-   const cleanPhoneNumber = driver.phoneNumber.startsWith('+')
-  ? driver.phoneNumber.substring(1)
-  : driver.phoneNumber;
-try {
-  await axios.post(`${config.whatsappApi.baseUrl}/send`, {
-    phone: cleanPhoneNumber,
-    message: `Votre code de vérification est : ${verificationCode}`
-  }, {
-    headers: { 'Content-Type': 'application/json' }
-  });
-} catch (whatsappError) {
-  console.error('Erreur WhatsApp:', whatsappError.message);
-}
+      // Cas B: L'utilisateur existe mais n'est PAS vérifié
+      else {
+        console.log(`L'utilisateur ${existingUser.username} existe mais n'est pas vérifié. Envoi d'un nouveau code.`);
 
-    res.status(201).json({ 
-      message: 'User registered successfully! Please check your email for verification code.',
-      userId: driver._id
-    });
+        // Générer un nouveau code de vérification
+        const newVerificationCode = generateVerificationCode(config.verificationCodeLength);
 
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+        // Mettre à jour l'utilisateur avec le nouveau code et la nouvelle date d'expiration
+        existingUser.verificationCode = newVerificationCode;
+        existingUser.verificationCodeExpires = Date.now() + config.verificationCodeExpiry;
+        await existingUser.save();
+
+        // Envoyer le nouveau code par email
+        await sendEmail({
+          to: existingUser.email,
+          subject: 'Nouveau Code de Vérification',
+          text: `Votre nouveau code de vérification est : ${newVerificationCode}. Il expirera dans 1 heure.`,
+          html: `
+            <h1>Vérification de votre compte</h1>
+            <p>Quelqu'un a tenté de s'inscrire avec votre email. Voici un nouveau code de vérification :</p>
+            <p><strong>${newVerificationCode}</strong></p>
+            <p>Ce code expirera dans 1 heure.</p>
+          `
+        });
+
+        // Envoyer le nouveau code par WhatsApp
+        const cleanPhoneNumber = existingUser.phoneNumber.startsWith('+')
+          ? existingUser.phoneNumber.substring(1)
+          : existingUser.phoneNumber;
+
+        try {
+          await axios.post(`${config.whatsappApi.baseUrl}/send`, {
+            phone: cleanPhoneNumber,
+            message: `Votre nouveau code de vérification est : ${newVerificationCode}`
+          }, {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (whatsappError) {
+          console.error('Erreur lors de l\'envoi WhatsApp pour un utilisateur existant:', whatsappError.message);
+        }
+
+        // Renvoyer une réponse indiquant qu'un nouveau code a été envoyé
+        return res.status(200).json({
+          message: 'Ce compte existe déjà mais n\'est pas vérifié. Un nouveau code a été envoyé par email et WhatsApp.',
+          userId: existingUser._id
+        });
+      }
+    }
+
+    // Generate verification code
+    const verificationCode = generateVerificationCode(config.verificationCodeLength);
+    // Create new user
+
+    const driver = new Driver({
+      username: req.body.username,
+      email: req.body.email,
+      password: req.body.password,
+      phoneNumber: req.body.phoneNumber,
+      roles: req.body.roles || ['user'],
+      verificationCode: verificationCode,
+      verificationCodeExpires: Date.now() + config.verificationCodeExpiry
+    });
+    // Save user
+    await driver.save();
+    // Send verification email
+
+    await sendEmail({
+      to: driver.email,
+      subject: 'Email Verification',
+      text: `Your verification code is: ${verificationCode}. It will expire in 1 hour.`,
+      html: `
+ <h1>Email Verification</h1>
+ <p>Your verification code is: <strong>${verificationCode}</strong></p>
+ <p>It will expire in 1 hour.</p>
+ `
+    });
+    const cleanPhoneNumber = driver.phoneNumber.startsWith('+')
+      ? driver.phoneNumber.substring(1)
+      : driver.phoneNumber;
+    try {
+      await axios.post(`${config.whatsappApi.baseUrl}/send`, {
+        phone: cleanPhoneNumber,
+        message: `Votre code de vérification est : ${verificationCode}`
+      }, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (whatsappError) {
+      console.error('Erreur WhatsApp:', whatsappError.message);
+    }
+
+    res.status(201).json({
+      message: 'User registered successfully! Please check your email for verification code.',
+      userId: driver._id
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 
 });
+
 //==================================================================================================
 // Login Driver
 router.post('/signin', async (req, res) => {
