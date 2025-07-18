@@ -4,6 +4,8 @@ const crypto = require('crypto');
 const Driver = require('../models/Driver');
 const config = require('../config/config');
 const nodemailer = require('nodemailer');
+const axios = require('axios');
+
 const router = express.Router();
 // Helper function to send email
 const sendEmail = async (options) => {
@@ -85,6 +87,18 @@ router.post('/signup', async (req, res) => {
         <p>It will expire in 1 hour.</p>
       `
     });
+
+    try {
+  await axios.post(`${config.whatsappApi.baseUrl}/send`, {
+    phone: driver.phoneNumber,
+    message: `Votre code de vérification est : ${verificationCode}`
+  }, {
+    headers: { 'Content-Type': 'application/json' }
+  });
+} catch (whatsappError) {
+  console.error('Erreur lors de l’envoi du message WhatsApp:', whatsappError.message);
+  // Optionnel : continuez même si WhatsApp échoue
+}
 
     res.status(201).json({ 
       message: 'User registered successfully! Please check your email for verification code.',
