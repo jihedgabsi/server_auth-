@@ -208,6 +208,7 @@ router.post('/signin', async (req, res) => {
       id: driver._id,
       username: driver.username,
       email: driver.email,
+      phoneNumber: driver.phoneNumber,
       roles: driver.roles,
       accessToken: token,
       fcmToken: driver.fcmToken // Include fcmToken in the response
