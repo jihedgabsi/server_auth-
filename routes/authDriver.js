@@ -633,7 +633,7 @@ router.put('/:id/update-profile', async (req, res) => {
     // Validate and add username if provided
     if (username && username.trim()) {
       // Check if username already exists (excluding current user)
-      const existingUser = await User.findOne({
+      const existingUser = await Driver.findOne({
         username: username.trim(),
         _id: { $ne: userId }
       });
