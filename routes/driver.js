@@ -1,6 +1,6 @@
 // ===== routes/Driver.js =====
 const express = require("express");
-const { verifyToken, isAdmin } = require("../middleware/authDriver");
+const Driver = require("../models/Driver");
 const {verifyTokenAny} = require("../middleware/authAny");
 
 const router = express.Router();
