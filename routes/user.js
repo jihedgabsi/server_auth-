@@ -1,16 +1,17 @@
 // ===== routes/user.js =====
 const express = require("express");
-const { verifyToken, isAdmin } = require("../middleware/authUser");
 const User = require("../models/User");
+const {verifyTokenAny} = require("../middleware/authAny");
+
 const router = express.Router();
 
 // Get current user's profile
-router.get("/profile", verifyToken, (req, res) => {
+router.get("/profile", verifyTokenAny, (req, res) => {
   res.status(200).json(req.user);
 });
 
 // Update user profile
-router.put("/profile", verifyToken, async (req, res) => {
+router.put("/profile", verifyTokenAny, async (req, res) => {
   try {
     // Prevent password update through this route
     if (req.body.password) {
@@ -29,7 +30,7 @@ router.put("/profile", verifyToken, async (req, res) => {
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id",verifyTokenAny, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -65,7 +66,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 // Get all users (admin only)
-router.get("/all", [verifyToken, isAdmin], async (req, res) => {
+router.get("/all", verifyTokenAny, async (req, res) => {
   try {
     const users = await User.find().select("-password");
     res.status(200).json(users);
@@ -75,7 +76,7 @@ router.get("/all", [verifyToken, isAdmin], async (req, res) => {
 });
 
 // Update Driver solde
-router.put("/:id/fcm-token",  async (req, res) => {
+router.put("/:id/fcm-token", verifyTokenAny, async (req, res) => {
  try {
     const { id } = req.params;
     const { fcmToken } = req.body || {};
