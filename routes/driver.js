@@ -1,16 +1,17 @@
 // ===== routes/Driver.js =====
 const express = require("express");
 const { verifyToken, isAdmin } = require("../middleware/authDriver");
-const Driver = require("../models/Driver");
+const {verifyTokenAny} = require("../middleware/authAny");
+
 const router = express.Router();
 
 // Get current Driver's profile
-router.get("/profile", verifyToken, (req, res) => {
+router.get("/profile", verifyTokenAny, (req, res) => {
   res.status(200).json(req.driver);
 });
 
 // Update Driver profile
-router.put("/profile", verifyToken, async (req, res) => {
+router.put("/profile", verifyTokenAny, async (req, res) => {
   try {
     // Prevent password update through this route
     if (req.body.password) {
@@ -29,7 +30,7 @@ router.put("/profile", verifyToken, async (req, res) => {
   }
 });
 // Get Driver by ID
-router.get("/:id", async (req, res) => {
+router.get("/:id",verifyTokenAny, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -66,7 +67,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update Driver solde
-router.put("/:id/solde",  async (req, res) => {
+router.put("/:id/solde",  verifyTokenAny,async (req, res) => {
   try {
     const { id } = req.params;
     const { solde } = req.body;
@@ -100,7 +101,7 @@ router.put("/:id/solde",  async (req, res) => {
 
 
 // Get all Drivers (admin only)
-router.get("/all", [verifyToken, isAdmin], async (req, res) => {
+router.get("/all", verifyTokenAny, async (req, res) => {
   try {
     const drivers = await Driver.find().select("-password");
     res.status(200).json(drivers);
@@ -111,7 +112,7 @@ router.get("/all", [verifyToken, isAdmin], async (req, res) => {
 
 
 // Update Driver solde
-router.put("/:id/fcm-token",  async (req, res) => {
+router.put("/:id/fcm-token", verifyTokenAny, async (req, res) => {
  try {
     const { id } = req.params;
     const { fcmToken } = req.body || {};
