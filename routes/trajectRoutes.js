@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const Traject = require('../models/Traject');
+const {verifyTokenAny} = require("../middleware/authAny");
+
 
 // GET all trajets
-router.get('/', async (req, res, next) => {
+router.get('/',verifyTokenAny, async (req, res, next) => {
   try {
     const trajets = await Traject.find();
     res.status(200).json(trajets);
@@ -12,7 +14,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 // GET trajets in descending order by createdAt
-router.get('/recent', async (req, res, next) => {
+router.get('/recent',verifyTokenAny, async (req, res, next) => {
   try {
     const { idChauffeur } = req.query;
     
@@ -42,7 +44,7 @@ router.get('/recent', async (req, res, next) => {
 
 
 // GET trajets in descending order by createdAt
-router.get('/trajectchauff', async (req, res, next) => {
+router.get('/trajectchauff',verifyTokenAny, async (req, res, next) => {
   try {
     const { idChauffeur } = req.query;
     
@@ -65,7 +67,7 @@ router.get('/trajectchauff', async (req, res, next) => {
   }
 });
 
-router.get('/search', async (req, res, next) => {
+router.get('/search',verifyTokenAny, async (req, res, next) => {
   try {
     const { from, to, date, type, range } = req.query;
     
@@ -111,7 +113,7 @@ router.get('/search', async (req, res, next) => {
 });
 
 // GET trajet by ID
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', verifyTokenAny,async (req, res, next) => {
   try {
     const trajet = await Traject.findById(req.params.id);
     if (!trajet) {
@@ -124,7 +126,7 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // CREATE new trajet
-router.post('/', async (req, res, next) => {
+router.post('/', verifyTokenAny,async (req, res, next) => {
   try {
     const newTrajet = new Traject(req.body);
     const savedTrajet = await newTrajet.save();
@@ -135,7 +137,7 @@ router.post('/', async (req, res, next) => {
 });
 
 // UPDATE trajet
-router.put('/:id', async (req, res, next) => {
+router.put('/:id',verifyTokenAny, async (req, res, next) => {
   try {
     const updatedTrajet = await Traject.findByIdAndUpdate(
       req.params.id,
@@ -154,7 +156,7 @@ router.put('/:id', async (req, res, next) => {
 });
 
 // DELETE trajet
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id',verifyTokenAny, async (req, res, next) => {
   try {
     const { id } = req.params;
     
