@@ -1,11 +1,12 @@
 const express = require("express");
 const Commission = require("../models/Commission");
-const { verifyToken, isAdmin } = require("../middleware/authDriver");
+const {verifyTokenAny} = require("../middleware/authAny");
+
 
 const router = express.Router();
 
 // Get current commission
-router.get("/", async (req, res) => {
+router.get("/", verifyTokenAny,async (req, res) => {
   try {
     // On suppose qu'il n'y a qu'un seul document Commission
     const commission = await Commission.findOne();
@@ -19,7 +20,7 @@ router.get("/", async (req, res) => {
 });
 
 // Update commission (admin only)
-router.put("/", [verifyToken, isAdmin], async (req, res) => {
+router.put("/", verifyTokenAny, async (req, res) => {
   try {
     const { valeur } = req.body;
     if (typeof valeur !== "number") {
