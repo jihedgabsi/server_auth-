@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const baggageController = require("../controllers/baggageController");
+const {verifyTokenAny} = require("../middleware/authAny");
+
 
 // Configure multer for memory storage
 const upload = multer({
@@ -23,11 +25,11 @@ const upload = multer({
 });
 
 // Routes
-router.get("/", baggageController.getAllBaggage);
+router.get("/", verifyTokenAny,baggageController.getAllBaggage);
 
-router.get("/:id", baggageController.getBaggage);
-router.post("/", upload.array("images", 3), baggageController.createBaggage); // Changed to upload.array and 'images'
-router.put("/:id", upload.array("images", 3), baggageController.updateBaggage); // Changed to upload.array and 'images'
-router.delete("/:id", baggageController.deleteBaggage);
+router.get("/:id",verifyTokenAny, baggageController.getBaggage);
+router.post("/",verifyTokenAny, upload.array("images", 3), baggageController.createBaggage); // Changed to upload.array and 'images'
+router.put("/:id",verifyTokenAny, upload.array("images", 3), baggageController.updateBaggage); // Changed to upload.array and 'images'
+router.delete("/:id",verifyTokenAny, baggageController.deleteBaggage);
 
 module.exports = router;
