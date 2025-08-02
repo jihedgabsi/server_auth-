@@ -6,6 +6,7 @@ const config = require('../config/config');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 const router = express.Router();
+const {verifyTokenAny} = require("../middleware/authAny");
 // Helper function to send email
 const sendEmail = async (options) => {
   // Setup email transporter
@@ -562,7 +563,7 @@ router.post('/reset-password-with-code', async (req, res) => {
   }
 });
 //====================================================
-router.put('/:id/update-profile', async (req, res) => {
+router.put('/:id/update-profile', verifyTokenAny,async (req, res) => {
   try {
     const { username, email, phoneNumber } = req.body;
     const userId = req.params.id; // From URL parameter
@@ -639,8 +640,7 @@ router.put('/:id/update-profile', async (req, res) => {
       }
 
       updateData.email = email.trim().toLowerCase();
-      // Reset email verification if email is changed
-      updateData.isVerified = false;
+
     }
 
     // Validate and add phone number if provided
