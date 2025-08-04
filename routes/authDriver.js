@@ -200,8 +200,8 @@ router.post('/signin', async (req, res) => {
     // Create token
     const token = jwt.sign(
       { id: driver._id },
-      config.jwtSecret,
-      { expiresIn: config.jwtExpiration }
+      config.jwtSecret
+    //  { expiresIn: config.jwtExpiration }
     );
 
     // Return driver info & token
