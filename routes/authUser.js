@@ -195,8 +195,7 @@ router.post('/signin', async (req, res) => {
     // Create token
     const token = jwt.sign(
       { id: user._id },
-      config.jwtSecret,
-      { expiresIn: config.jwtExpiration }
+      config.jwtSecret
     );
 
     // Return user info & token
