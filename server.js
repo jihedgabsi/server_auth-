@@ -16,6 +16,7 @@ const demandeTransportRoutes = require('./routes/demandeTransportRoutes');
 const commissionRoutes = require("./routes/Commission");
 const updateRoutes = require('./routes/updateConfig');
 const airportport = require('./routes/airportport');
+const historiquepaiment = require('./routes/historiqueRoutes');
 const app = express();
 
 // Middleware
@@ -48,6 +49,7 @@ app.use('/api/demandes-transport', demandeTransportRoutes);
 app.use('/api/commission', commissionRoutes);
 app.use('/api/updates', updateRoutes);
 app.use('/api/airportport', airportport);
+app.use('/api/historiqueRoutes', historiqueRoutes);
 
 
 // Simple route for testing
