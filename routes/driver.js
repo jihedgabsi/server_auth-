@@ -2,6 +2,7 @@
 const express = require("express");
 const Driver = require("../models/Driver");
 const {verifyTokenAny} = require("../middleware/authAny");
+const HistoriquePaiement = require('../models/HistoriquePaiement');
 
 const router = express.Router();
 
@@ -67,7 +68,7 @@ router.get("/:id",verifyTokenAny, async (req, res) => {
 });
 
 // Update Driver solde
-router.put("/:id/solde",  verifyTokenAny,async (req, res) => {
+router.put("/:id/solde", verifyTokenAny, async (req, res) => {
   try {
     const { id } = req.params;
     const { solde } = req.body;
@@ -78,15 +79,38 @@ router.put("/:id/solde",  verifyTokenAny,async (req, res) => {
       });
     }
 
+    // --- NOUVELLE LOGIQUE D'HISTORIQUE ---
+    // On exécute cette logique uniquement si on remet le solde à 0
+    if (solde === 0) {
+      // 1. Trouver le chauffeur pour récupérer son solde actuel AVANT la mise à jour
+      const driverAvantUpdate = await Driver.findById(id);
+
+      if (!driverAvantUpdate) {
+        return res.status(404).json({ message: "Chauffeur non trouvé." });
+      }
+
+      // 2. On crée un enregistrement d'historique seulement si le solde était positif
+      if (driverAvantUpdate.solde > 0) {
+        await HistoriquePaiement.create({
+          id_driver: id,
+          montantPaye: driverAvantUpdate.solde, // On enregistre l'ancien solde
+        });
+      }
+    }
+    // --- FIN DE LA NOUVELLE LOGIQUE ---
+
+
+    // La mise à jour du solde du chauffeur se fait ensuite, comme avant
     const updatedDriver = await Driver.findByIdAndUpdate(
       id,
-      { $set: { solde } },
+      { $set: { solde: solde } },
       { new: true, select: "-password" }
     );
 
     if (!updatedDriver) {
+      // Cette vérification est un peu redondante mais reste une bonne sécurité
       return res.status(404).json({
-        message: "Chauffeur non trouvé."
+        message: "Chauffeur non trouvé lors de la mise à jour."
       });
     }
 
