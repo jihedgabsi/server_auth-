@@ -1,6 +1,6 @@
 const DemandeTransport = require("../models/DemandeTransport");
 const Baggage = require("../models/Baggage"); // To validate baggage IDs
-
+const Driver = require('../models/Driver'); // Adaptez le chemin si besoin
 // @desc    Create a new DemandeTransport
 // @route   POST /api/demandes-transport
 // @access  Private (to be decided based on auth implementation)
@@ -118,18 +118,41 @@ exports.getDemandeTransportById = async (req, res, next) => {
 // @access  Private
 exports.updateDemandeTransport = async (req, res, next) => {
   try {
-    let demandeTransport = await DemandeTransport.findById(req.params.id);
+    // 1. Récupérer la demande AVANT la mise à jour pour connaître son état actuel
+    let demandeAvantUpdate = await DemandeTransport.findById(req.params.id);
 
-    if (!demandeTransport) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: `DemandeTransport not found with id of ${req.params.id}`,
-        });
+    if (!demandeAvantUpdate) {
+      return res.status(404).json({
+        success: false,
+        message: `DemandeTransport introuvable avec l'ID ${req.params.id}`,
+      });
     }
 
-    // Validate baggage IDs if provided in update
+    // --- DÉBUT DE LA NOUVELLE LOGIQUE ---
+
+    // 2. Vérifier si le statut est mis à jour à 'accepted'
+    // On vérifie aussi que l'ancien statut n'était pas déjà 'accepted' pour éviter d'ajouter le solde plusieurs fois.
+    if (req.body.statutsDemande === 'accepted' && demandeAvantUpdate.statutsDemande !== 'accepted') {
+      
+      // 3. Valider que le chauffeur et le prix existent sur la demande
+      if (!demandeAvantUpdate.id_driver || typeof demandeAvantUpdate.prixProposer !== 'number') {
+        return res.status(400).json({
+          success: false,
+          message: "Impossible d'accepter : Un chauffeur doit être assigné et un prix doit être défini.",
+        });
+      }
+
+      // 4. Mettre à jour le solde du chauffeur
+      // L'opérateur $inc est parfait pour ajouter une valeur de manière atomique
+      await Driver.findByIdAndUpdate(
+        demandeAvantUpdate.id_driver,
+        { $inc: { solde: demandeAvantUpdate.prixProposer } }
+      );
+    }
+    // --- FIN DE LA NOUVELLE LOGIQUE ---
+
+
+    // Votre validation pour les bagages reste inchangée
     if (req.body.id_bagages && req.body.id_bagages.length > 0) {
       const baggageDocs = await Baggage.find({
         _id: { $in: req.body.id_bagages },
@@ -139,7 +162,7 @@ exports.updateDemandeTransport = async (req, res, next) => {
           .status(400)
           .json({
             success: false,
-            message: "One or more baggage IDs are invalid for update.",
+            message: "Un ou plusieurs ID de bagages sont invalides.",
           });
       }
     } else if (req.body.id_bagages && req.body.id_bagages.length === 0) {
@@ -147,11 +170,12 @@ exports.updateDemandeTransport = async (req, res, next) => {
         .status(400)
         .json({
           success: false,
-          message: "At least one baggage ID is required for update.",
+          message: "Au moins un ID de bagage est requis.",
         });
     }
-
-    demandeTransport = await DemandeTransport.findByIdAndUpdate(
+    
+    // 5. Effectuer la mise à jour de la demande de transport
+    const demandeTransportMiseAJour = await DemandeTransport.findByIdAndUpdate(
       req.params.id,
       req.body,
       {
@@ -162,7 +186,7 @@ exports.updateDemandeTransport = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: demandeTransport,
+      data: demandeTransportMiseAJour,
     });
   } catch (error) {
     next(error);
