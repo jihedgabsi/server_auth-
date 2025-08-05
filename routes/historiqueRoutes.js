@@ -11,7 +11,7 @@ const { verifyTokenAny } = require('../middleware/authAny'); // Adaptez le chemi
  * @desc    Récupérer l'historique de tous les paiements pour un chauffeur spécifique
  * @access  Private
  */
-router.get('/driver/:driverId',async (req, res) => {
+router.get('/driver/:driverId',verifyTokenAny,async (req, res) => {
   try {
     const { driverId } = req.params;
 
