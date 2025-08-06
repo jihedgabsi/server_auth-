@@ -3,6 +3,7 @@ const express = require("express");
 const Driver = require("../models/Driver");
 const {verifyTokenAny} = require("../middleware/authAny");
 const HistoriquePaiement = require('../models/HistoriquePaiement');
+const Commission = require('../models/Commission');
 
 const router = express.Router();
 
@@ -72,6 +73,8 @@ router.put("/:id/solde", verifyTokenAny, async (req, res) => {
   try {
     const { id } = req.params;
     const { solde } = req.body;
+    const commissionDoc = await Commission.findOne().sort({ updatedAt: -1 });
+    const commissionPercentage = commissionDoc ? commissionDoc.valeur : 10; // ex: 10%
 
     if (typeof solde !== "number") {
       return res.status(400).json({
@@ -91,9 +94,10 @@ router.put("/:id/solde", verifyTokenAny, async (req, res) => {
 
       // 2. On crée un enregistrement d'historique seulement si le solde était positif
       if (driverAvantUpdate.solde > 0) {
+        const commissionAmount = driverAvantUpdate.solde * (commissionPercentage / 100);
         await HistoriquePaiement.create({
           id_driver: id,
-          montantPaye: driverAvantUpdate.solde, // On enregistre l'ancien solde
+          montantPaye: commissionAmount, // On enregistre l'ancien solde
         });
       }
     }
