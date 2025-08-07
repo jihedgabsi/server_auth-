@@ -73,36 +73,13 @@ router.put("/:id/solde", verifyTokenAny, async (req, res) => {
   try {
     const { id } = req.params;
     const { solde } = req.body;
-    const commissionDoc = await Commission.findOne().sort({ updatedAt: -1 });
-    const commissionPercentage = commissionDoc ? commissionDoc.valeur : 10; // ex: 10%
+
 
     if (typeof solde !== "number") {
       return res.status(400).json({
         message: "Le solde doit être un nombre."
       });
     }
-
-    // --- NOUVELLE LOGIQUE D'HISTORIQUE ---
-    // On exécute cette logique uniquement si on remet le solde à 0
-    if (solde === 0) {
-      // 1. Trouver le chauffeur pour récupérer son solde actuel AVANT la mise à jour
-      const driverAvantUpdate = await Driver.findById(id);
-
-      if (!driverAvantUpdate) {
-        return res.status(404).json({ message: "Chauffeur non trouvé." });
-      }
-
-      // 2. On crée un enregistrement d'historique seulement si le solde était positif
-      if (driverAvantUpdate.solde > 0) {
-        const commissionAmount = driverAvantUpdate.solde * (commissionPercentage / 100);
-        await HistoriquePaiement.create({
-          id_driver: id,
-          montantPaye: commissionAmount, // On enregistre l'ancien solde
-        });
-      }
-    }
-    // --- FIN DE LA NOUVELLE LOGIQUE ---
-
 
     // La mise à jour du solde du chauffeur se fait ensuite, comme avant
     const updatedDriver = await Driver.findByIdAndUpdate(
@@ -127,6 +104,92 @@ router.put("/:id/solde", verifyTokenAny, async (req, res) => {
   }
 });
 
+router.get("/:id/solde-details", verifyTokenAny, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Étape 1: Trouver le chauffeur dans la base de données.
+    // On sélectionne uniquement le champ 'solde' pour optimiser la requête.
+    const driver = await Driver.findById(id).select("solde");
+    if (!driver) {
+      return res.status(404).json({ message: "Chauffeur non trouvé." });
+    }
+
+    // Étape 2: Récupérer la commission la plus récente depuis la base de données.
+    // Si aucune commission n'est définie, on utilise une valeur par défaut (ici, 10%).
+    const commissionDoc = await Commission.findOne().sort({ updatedAt: -1 });
+    const commissionPercentage = commissionDoc ? commissionDoc.valeur : 10;
+
+    const soldeBrut = driver.solde;
+
+    // Étape 3: Calculer les montants.
+    // Le montant de la commission est la part qui revient à la plateforme.
+    const montantCommission = soldeBrut * (commissionPercentage / 100);
+
+    // Le solde net est ce qui revient réellement au chauffeur après déduction de la commission.
+    const soldeNet = soldeBrut - montantCommission;
+
+    // Étape 4: Renvoyer une réponse JSON avec tous les détails.
+    res.status(200).json({
+      soldeBrut: soldeBrut.toFixed(2), // Le solde total généré par le chauffeur
+      commissionPercentage: commissionPercentage, // Le pourcentage de la commission
+      montantCommission: montantCommission.toFixed(2), // Le montant de la commission revenant à la plateforme
+      soldeNet: soldeNet.toFixed(2), // Le montant net à payer au chauffeur
+    });
+
+  } catch (error) {
+    // En cas d'erreur, on log l'erreur et on renvoie une réponse 500.
+    console.error("Erreur lors de la récupération du solde détaillé :", error);
+    res.status(500).json({
+      message: "Erreur serveur lors de la récupération du solde.",
+      error: error.message,
+    });
+  }
+});
+
+
+
+// Update Driver solde
+router.put("/:id/soldepayement", verifyTokenAny, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amountInCents } = req.body;
+
+ if (typeof amountInCents !== "number") {
+      return res.status(400).json({
+        message: "Le amountInCents doit être un nombre."
+      });
+    }
+
+        await HistoriquePaiement.create({
+          id_driver: id,
+          montantPaye: amountInCents, // On enregistre l'ancien solde
+        });
+   
+
+
+    // La mise à jour du solde du chauffeur se fait ensuite, comme avant
+    const updatedDriver = await Driver.findByIdAndUpdate(
+      id,
+      { $set: { solde: 0 } },
+      { new: true, select: "-password" }
+    );
+
+    if (!updatedDriver) {
+      // Cette vérification est un peu redondante mais reste une bonne sécurité
+      return res.status(404).json({
+        message: "Chauffeur non trouvé lors de la mise à jour."
+      });
+    }
+
+    res.status(200).json(updatedDriver);
+  } catch (error) {
+    res.status(500).json({
+      message: "Erreur lors de la mise à jour du solde.",
+      error: error.message
+    });
+  }
+});
 
 // Get all Drivers (admin only)
 router.get("/all", verifyTokenAny, async (req, res) => {
