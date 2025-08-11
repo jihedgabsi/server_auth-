@@ -50,8 +50,9 @@ router.post('/signup', async (req, res) => {
     // Check for existing user
     const existingUser = await User.findOne({
       $or: [
-        { email: req.body.email },
-        { phoneNumber: req.body.phoneNumber }
+        { email: req.body.email }
+        //,
+        //{ phoneNumber: req.body.phoneNumber }
       ]
     });
 
@@ -600,7 +601,7 @@ router.put('/:id/update-profile', verifyTokenAny,async (req, res) => {
     if (username && username.trim()) {
       // Check if username already exists (excluding current user)
       const existingUser = await User.findOne({
-        username: username.trim(),
+       // username: username.trim(),
         _id: { $ne: userId }
       });
 
@@ -627,7 +628,7 @@ router.put('/:id/update-profile', verifyTokenAny,async (req, res) => {
 
       // Check if email already exists (excluding current user)
       const existingUser = await User.findOne({
-        email: email.trim().toLowerCase(),
+       // email: email.trim().toLowerCase(),
         _id: { $ne: userId }
       });
 
