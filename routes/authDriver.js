@@ -52,9 +52,9 @@ router.post('/signup', async (req, res) => {
 
     const existingUser = await Driver.findOne({
       $or: [
-        { email: req.body.email },
+        { email: req.body.email }
 
-        { phoneNumber: req.body.phoneNumber }
+    //   , { phoneNumber: req.body.phoneNumber }
       ]
     });
 
@@ -635,7 +635,7 @@ router.put('/:id/update-profile',verifyTokenAny, async (req, res) => {
     if (username && username.trim()) {
       // Check if username already exists (excluding current user)
       const existingUser = await Driver.findOne({
-        username: username.trim(),
+       // username: username.trim(),
         _id: { $ne: userId }
       });
 
