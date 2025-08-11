@@ -599,18 +599,6 @@ router.put('/:id/update-profile', verifyTokenAny,async (req, res) => {
 
     // Validate and add username if provided
     if (username && username.trim()) {
-      // Check if username already exists (excluding current user)
-      const existingUser = await User.findOne({
-       // username: username.trim(),
-        _id: { $ne: userId }
-      });
-
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'Username already exists.'
-        });
-      }
 
       updateData.username = username.trim();
     }
