@@ -614,18 +614,6 @@ router.put('/:id/update-profile', verifyTokenAny,async (req, res) => {
         });
       }
 
-      // Check if email already exists (excluding current user)
-      const existingUser = await User.findOne({
-       // email: email.trim().toLowerCase(),
-        _id: { $ne: userId }
-      });
-
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email already exists.'
-        });
-      }
 
       updateData.email = email.trim().toLowerCase();
 
