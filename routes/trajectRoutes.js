@@ -44,7 +44,7 @@ router.get('/recent',verifyTokenAny, async (req, res, next) => {
 
 
 // GET trajets in descending order by createdAt
-router.get('/trajectchauff',verifyTokenAny, async (req, res, next) => {
+router.get('/trajectchauff', async (req, res, next) => {
   try {
     const { idChauffeur } = req.query;
     
@@ -67,62 +67,61 @@ router.get('/trajectchauff',verifyTokenAny, async (req, res, next) => {
   }
 });
 
-router.get('/search',  async (req, res, next) => {
+router.get('/search', verifyTokenAny, async (req, res, next) => {
   try {
     const { from, to, date, type } = req.query;
 
     if (!from || !to || !date || !type) {
       return res.status(400).json({
-        message: 'Paramètres manquants. Veuillez fournir from, to, date, et type.'
+        message: 'Missing required parameters. Please provide from, to, date, and type.'
       });
     }
 
-    // --- NOUVELLE LIGNE DE CORRECTION ---
-    // Remplace les '/' par des '-' pour accepter les deux formats (YYYY/MM/DD et YYYY-MM-DD).
-    const formattedDate = date.replaceAll('/', '-');
-    // --- FIN DE LA NOUVELLE LIGNE ---
-
-    // On utilise la date normalisée pour la suite du traitement
-    const dateObj = new Date(formattedDate + 'T00:00:00.000Z');
-
+    const dateObj = new Date(date);
     if (isNaN(dateObj.getTime())) {
-      return res.status(400).json({ message: 'Format de date invalide.' });
+      return res.status(400).json({ message: 'Format de date invalide' });
     }
 
-    const now = new Date();
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    // --- NOUVEAU BLOC DE VÉRIFICATION ---
+    // S'assure que la date de recherche n'est pas dans le passé.
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // On met à minuit pour comparer uniquement les jours.
 
     if (dateObj < today) {
       return res.status(400).json({
-        message: 'La date de recherche ne peut pas être dans le passé.'
+        message: 'La date de recherche ne peut pas être dans le passé. Veuillez choisir une date future.'
       });
     }
+    // --- FIN DU NOUVEAU BLOC ---
 
-    const dayInMilliseconds = 24 * 60 * 60 * 1000;
-    const dateRangeInMs = 15 * dayInMilliseconds;
+    const dateRangeDays = 15;
+    const startDate = new Date(dateObj);
+    const endDate = new Date(dateObj);
 
-    const startDate = new Date(dateObj.getTime() - dateRangeInMs);
-    const endDate = new Date(dateObj.getTime() + dateRangeInMs);
+    // On calcule la plage de -15/+15 jours autour de la date demandée
+    startDate.setDate(startDate.getDate() - dateRangeDays);
+    endDate.setDate(endDate.getDate() + dateRangeDays);
 
+    // On s'assure que la date de début de la recherche n'est jamais avant aujourd'hui.
     const finalStartDate = new Date(Math.max(startDate.getTime(), today.getTime()));
 
+    // Construit la requête
     const query = {
       pointRamasage: { $in: [from] },
       pointLivraison: { $in: [to] },
       modetransport: type,
       dateTraject: {
-        $gte: finalStartDate,
+        $gte: finalStartDate, // La recherche commence AU PLUS TÔT à aujourd'hui
         $lte: endDate
       }
     };
-    
-    console.log("Requête MongoDB envoyée :", JSON.stringify(query, null, 2));
 
     const trajets = await Traject.find(query).sort({ dateTraject: 1 });
-    res.status(200).json(trajets);
 
+    res.status(200).json(trajets);
   } catch (error) {
-    console.error('Erreur lors de la recherche:', error);
+    console.error('Search error:', error);
+    // ... gestion des erreurs
     next(error);
   }
 });
