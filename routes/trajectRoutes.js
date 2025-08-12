@@ -67,7 +67,7 @@ router.get('/trajectchauff',verifyTokenAny, async (req, res, next) => {
   }
 });
 
-router.get('/search',  async (req, res, next) => {
+router.get('/search', verifyTokenAny, async (req, res, next) => {
   try {
     const { from, to, date, type } = req.query;
 
