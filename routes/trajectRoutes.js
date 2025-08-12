@@ -44,7 +44,7 @@ router.get('/recent',verifyTokenAny, async (req, res, next) => {
 
 
 // GET trajets in descending order by createdAt
-router.get('/trajectchauff', async (req, res, next) => {
+router.get('/trajectchauff',verifyTokenAny, async (req, res, next) => {
   try {
     const { idChauffeur } = req.query;
     
@@ -67,7 +67,7 @@ router.get('/trajectchauff', async (req, res, next) => {
   }
 });
 
-router.get('/search', verifyTokenAny, async (req, res, next) => {
+router.get('/search',  async (req, res, next) => {
   try {
     const { from, to, date, type } = req.query;
 
