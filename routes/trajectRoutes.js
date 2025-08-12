@@ -69,40 +69,43 @@ router.get('/trajectchauff',verifyTokenAny, async (req, res, next) => {
 
 router.get('/search', verifyTokenAny, async (req, res, next) => {
   try {
-    console.log("\n--- [1] Début de la Requête de Recherche ---");
     const { from, to, date, type } = req.query;
-    console.log("Paramètres reçus du client:", { from, to, date, type });
 
-    // Vérification des paramètres
     if (!from || !to || !date || !type) {
-      console.log("!!! ERREUR: Paramètres manquants.");
       return res.status(400).json({
         message: 'Paramètres manquants. Veuillez fournir from, to, date, et type.'
       });
     }
 
-    // --- Logique de Date (ne change pas) ---
-    const dateObj = new Date(date + 'T00:00:00.000Z');
+    // --- NOUVELLE LIGNE DE CORRECTION ---
+    // Remplace les '/' par des '-' pour accepter les deux formats (YYYY/MM/DD et YYYY-MM-DD).
+    const formattedDate = date.replaceAll('/', '-');
+    // --- FIN DE LA NOUVELLE LIGNE ---
+
+    // On utilise la date normalisée pour la suite du traitement
+    const dateObj = new Date(formattedDate + 'T00:00:00.000Z');
+
     if (isNaN(dateObj.getTime())) {
-      console.log("!!! ERREUR: Format de date invalide.");
       return res.status(400).json({ message: 'Format de date invalide.' });
     }
+
     const now = new Date();
     const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
     if (dateObj < today) {
-       console.log("!!! ERREUR: La date de recherche est dans le passé.");
       return res.status(400).json({
         message: 'La date de recherche ne peut pas être dans le passé.'
       });
     }
+
     const dayInMilliseconds = 24 * 60 * 60 * 1000;
     const dateRangeInMs = 15 * dayInMilliseconds;
+
     const startDate = new Date(dateObj.getTime() - dateRangeInMs);
     const endDate = new Date(dateObj.getTime() + dateRangeInMs);
-    const finalStartDate = new Date(Math.max(startDate.getTime(), today.getTime()));
-    // --- Fin de la Logique de Date ---
 
-    // Construction de la requête
+    const finalStartDate = new Date(Math.max(startDate.getTime(), today.getTime()));
+
     const query = {
       pointRamasage: { $in: [from] },
       pointLivraison: { $in: [to] },
@@ -113,25 +116,16 @@ router.get('/search', verifyTokenAny, async (req, res, next) => {
       }
     };
     
-    console.log("\n--- [2] Requête Finale Envoyée à MongoDB ---");
-    console.log(JSON.stringify(query, null, 2));
+    console.log("Requête MongoDB envoyée :", JSON.stringify(query, null, 2));
 
     const trajets = await Traject.find(query).sort({ dateTraject: 1 });
-    
-    console.log("\n--- [3] Résultat de la Recherche ---");
-    console.log(`Nombre de trajets trouvés: ${trajets.length}`);
-    if (trajets.length > 0) {
-      console.log("Premier trajet trouvé:", trajets[0]);
-    }
-    
     res.status(200).json(trajets);
 
   } catch (error) {
-    console.error('!!! [4] Erreur Inattendue Capturée !!!', error);
+    console.error('Erreur lors de la recherche:', error);
     next(error);
   }
 });
-
 
 
 // GET trajet by ID
