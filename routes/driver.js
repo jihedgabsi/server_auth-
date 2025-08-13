@@ -153,30 +153,40 @@ router.get("/:id/solde-details", verifyTokenAny, async (req, res) => {
 router.put("/:id/soldepayement", verifyTokenAny, async (req, res) => {
   try {
     const { id } = req.params;
-    const { amountInCents,soldetotale } = req.body;
+    const { amountInCents, soldetotale } = req.body;
 
- if (typeof amountInCents !== "number") {
+    // --- Début des validations ---
+
+    // Validation pour amountInCents
+    if (amountInCents == null || typeof amountInCents !== "number" || amountInCents < 0) {
       return res.status(400).json({
-        message: "Le amountInCents doit être un nombre."
+        message: "Le champ 'amountInCents' est invalide. Il doit être un nombre positif ou nul."
       });
     }
 
-        await HistoriquePaiement.create({
-          id_driver: id,
-          montantPaye: amountInCents, // On enregistre l'ancien solde
+    // Validation pour soldetotale
+    if (soldetotale == null || typeof soldetotale !== "number" || soldetotale < 0) {
+        return res.status(400).json({
+          message: "Le champ 'soldetotale' est invalide. Il doit être un nombre positif ou nul."
         });
+    }
 
-    
-   
+    // --- Fin des validations ---
+
+    await HistoriquePaiement.create({
+      id_driver: id,
+      montantPaye: amountInCents, // On enregistre le montant payé
+    });
+
     // La mise à jour du solde du chauffeur se fait ensuite, comme avant
     const updatedDriver = await Driver.findByIdAndUpdate(
       id,
-      { $inc: { solde: -soldetotale } },
+      { $inc: { solde: -soldetotale } }, // On déduit le soldetotale
       { new: true, select: "-password" }
     );
 
     if (!updatedDriver) {
-      // Cette vérification est un peu redondante mais reste une bonne sécurité
+      // Cette vérification est utile si l'ID est valide mais ne correspond à aucun document
       return res.status(404).json({
         message: "Chauffeur non trouvé lors de la mise à jour."
       });
