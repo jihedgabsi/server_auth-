@@ -171,7 +171,7 @@ router.put("/:id/soldepayement", verifyTokenAny, async (req, res) => {
     // La mise à jour du solde du chauffeur se fait ensuite, comme avant
     const updatedDriver = await Driver.findByIdAndUpdate(
       id,
-      { $set: { solde: 0 } },
+      { $inc: { solde: -amountInCents } },
       { new: true, select: "-password" }
     );
 
