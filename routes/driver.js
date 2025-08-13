@@ -153,7 +153,7 @@ router.get("/:id/solde-details", verifyTokenAny, async (req, res) => {
 router.put("/:id/soldepayement", verifyTokenAny, async (req, res) => {
   try {
     const { id } = req.params;
-    const { amountInCents } = req.body;
+    const { amountInCents,soldetotale } = req.body;
 
  if (typeof amountInCents !== "number") {
       return res.status(400).json({
@@ -171,7 +171,7 @@ router.put("/:id/soldepayement", verifyTokenAny, async (req, res) => {
     // La mise à jour du solde du chauffeur se fait ensuite, comme avant
     const updatedDriver = await Driver.findByIdAndUpdate(
       id,
-      { $inc: { solde: -amountInCents*100 } },
+      { $inc: { solde: -soldetotale } },
       { new: true, select: "-password" }
     );
 
