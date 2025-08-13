@@ -165,13 +165,22 @@ router.put("/:id/soldepayement", verifyTokenAny, async (req, res) => {
           id_driver: id,
           montantPaye: amountInCents, // On enregistre l'ancien solde
         });
+
+    const commissionDoc = await Commission.findOne().sort({ updatedAt: -1 });
+    const commissionPercentage = commissionDoc ? commissionDoc.valeur : 10;
+
+    const soldeBrut = driver.solde;
+
+    // Étape 3: Calculer les montants.
+    // Le montant de la commission est la part qui revient à la plateforme.
+    const montantCommission = soldeBrut - (amountInCents * 100);
    
 
 
     // La mise à jour du solde du chauffeur se fait ensuite, comme avant
     const updatedDriver = await Driver.findByIdAndUpdate(
       id,
-      { $inc: { solde: -amountInCents } },
+      { $set: { solde: montantCommission } },
       { new: true, select: "-password" }
     );
 
