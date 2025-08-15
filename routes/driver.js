@@ -145,35 +145,27 @@ router.get("/:id/solde-details", verifyTokenAny, async (req, res) => {
 router.put("/:id/soldepayement", verifyTokenAny, async (req, res) => {
   try {
     const { id } = req.params;
-    const { amountInCents, soldetotale } = req.body;
+    const { rechargeAmount } = req.body;
 
     // --- Début des validations ---
 
     // Validation pour amountInCents
-    if (amountInCents == null || typeof amountInCents !== "number" ) {
+    if (rechargeAmount == null || typeof rechargeAmount !== "number" ) {
       return res.status(400).json({
-        message: "Le champ 'amountInCents' est invalide. Il doit être un nombre positif ou nul."
+        message: "Le champ 'rechargeAmount' est invalide. Il doit être un nombre positif ou nul."
       });
     }
-
-    // Validation pour soldetotale
-    if (soldetotale == null || typeof soldetotale !== "number" ) {
-        return res.status(400).json({
-          message: "Le champ 'soldetotale' est invalide. Il doit être un nombre positif ou nul."
-        });
-    }
-
     // --- Fin des validations ---
 
     await HistoriquePaiement.create({
       id_driver: id,
-      montantPaye: amountInCents, // On enregistre le montant payé
+      montantPaye: rechargeAmount, // On enregistre le montant payé
     });
 
     // La mise à jour du solde du chauffeur se fait ensuite, comme avant
     const updatedDriver = await Driver.findByIdAndUpdate(
       id,
-      { $inc: { solde: -soldetotale } }, // On déduit le soldetotale
+      { $inc: { solde: rechargeAmount } }, // On déduit le soldetotale
       { new: true, select: "-password" }
     );
 
