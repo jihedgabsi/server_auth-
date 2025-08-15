@@ -122,27 +122,11 @@ router.get("/:id/solde-details", verifyTokenAny, async (req, res) => {
     if (!driver) {
       return res.status(404).json({ message: "Chauffeur non trouvé." });
     }
-
-    // Étape 2: Récupérer la commission la plus récente depuis la base de données.
-    // Si aucune commission n'est définie, on utilise une valeur par défaut (ici, 10%).
-    const commissionDoc = await Commission.findOne().sort({ updatedAt: -1 });
-    const commissionPercentage = commissionDoc ? commissionDoc.valeur : 10;
-
     const soldeBrut = driver.solde;
-
-    // Étape 3: Calculer les montants.
-    // Le montant de la commission est la part qui revient à la plateforme.
-    const montantCommission = soldeBrut * (commissionPercentage / 100);
-
-    // Le solde net est ce qui revient réellement au chauffeur après déduction de la commission.
-    const soldeNet = soldeBrut - montantCommission;
 
     // Étape 4: Renvoyer une réponse JSON avec tous les détails.
     res.status(200).json({
       soldeBrut: soldeBrut.toFixed(2), // Le solde total généré par le chauffeur
-      commissionPercentage: commissionPercentage, // Le pourcentage de la commission
-      montantCommission: montantCommission.toFixed(2), // Le montant de la commission revenant à la plateforme
-      soldeNet: soldeNet.toFixed(2), // Le montant net à payer au chauffeur
     });
 
   } catch (error) {
