@@ -61,6 +61,9 @@ const demandeTransportSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  Percentageactuel: {
+    type: String,
+  },
   id_bagages: [{ // Corrected from id_bagagdes to id_bagages for consistency
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Baggage', // Referencing the existing Baggage model
