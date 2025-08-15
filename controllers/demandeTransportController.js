@@ -151,7 +151,7 @@ exports.updateDemandeTransport = async (req, res, next) => {
       // L'opérateur $inc est parfait pour ajouter une valeur de manière atomique
      await Driver.findByIdAndUpdate(
      demandeAvantUpdate.id_driver,
-     { $inc: { solde: -demandeAvantUpdate.prixProposer } }
+     { $inc: { solde: -montantCommission } }
     );
     }
     // --- FIN DE LA NOUVELLE LOGIQUE ---
