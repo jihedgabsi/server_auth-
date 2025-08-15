@@ -166,14 +166,14 @@ router.put("/:id/soldepayement", verifyTokenAny, async (req, res) => {
     // --- Début des validations ---
 
     // Validation pour amountInCents
-    if (amountInCents == null || typeof amountInCents !== "number" || amountInCents < 0) {
+    if (amountInCents == null || typeof amountInCents !== "number" ) {
       return res.status(400).json({
         message: "Le champ 'amountInCents' est invalide. Il doit être un nombre positif ou nul."
       });
     }
 
     // Validation pour soldetotale
-    if (soldetotale == null || typeof soldetotale !== "number" || soldetotale < 0) {
+    if (soldetotale == null || typeof soldetotale !== "number" ) {
         return res.status(400).json({
           message: "Le champ 'soldetotale' est invalide. Il doit être un nombre positif ou nul."
         });
