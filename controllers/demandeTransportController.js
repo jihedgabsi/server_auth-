@@ -1,6 +1,7 @@
 const DemandeTransport = require("../models/DemandeTransport");
 const Baggage = require("../models/Baggage"); // To validate baggage IDs
 const Driver = require('../models/Driver'); // Adaptez le chemin si besoin
+const Commission = require('../models/Commission');
 // @desc    Create a new DemandeTransport
 // @route   POST /api/demandes-transport
 // @access  Private (to be decided based on auth implementation)
@@ -141,13 +142,17 @@ exports.updateDemandeTransport = async (req, res, next) => {
           message: "Impossible d'accepter : Un chauffeur doit être assigné et un prix doit être défini.",
         });
       }
+    const commissionDoc = await Commission.findOne().sort({ updatedAt: -1 });
+    const commissionPercentage = commissionDoc ? commissionDoc.valeur : 10;
+    const montantCommission = demandeAvantUpdate.prixProposer * (commissionPercentage / 100);
 
+    req.body.Percentageactuel = commissionPercentage.toString();
       // 4. Mettre à jour le solde du chauffeur
       // L'opérateur $inc est parfait pour ajouter une valeur de manière atomique
-      await Driver.findByIdAndUpdate(
-        demandeAvantUpdate.id_driver,
-        { $inc: { solde: demandeAvantUpdate.prixProposer } }
-      );
+     await Driver.findByIdAndUpdate(
+     demandeAvantUpdate.id_driver,
+     { $inc: { solde: -demandeAvantUpdate.prixProposer } }
+    );
     }
     // --- FIN DE LA NOUVELLE LOGIQUE ---
 
