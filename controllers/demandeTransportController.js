@@ -5,6 +5,63 @@ const Commission = require('../models/Commission');
 // @desc    Create a new DemandeTransport
 // @route   POST /api/demandes-transport
 // @access  Private (to be decided based on auth implementation)
+
+
+
+exports.addOrUpdateReview = async (req, res, next) => {
+  try {
+    // 1. Récupérer l'ID de la demande depuis les paramètres de l'URL
+    const { id } = req.params;
+
+    // 2. Récupérer les étoiles et le commentaire depuis le corps de la requête
+    const { nbstars, comentaire } = req.body;
+
+    // Validation simple : au moins les étoiles doivent être fournies
+    if (nbstars === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Le nombre d'étoiles (nbstars) est requis.",
+      });
+    }
+
+    // 3. Trouver la demande par son ID et la mettre à jour
+    const updatedDemande = await DemandeTransport.findByIdAndUpdate(
+      id,
+      {
+        nbstars: nbstars,
+        comentaire: comentaire,
+      },
+      {
+        new: true, // Pour retourner le document mis à jour
+        runValidators: true, // Pour exécuter les validateurs du schéma si vous en avez
+      }
+    );
+
+    // 4. Si la demande n'est pas trouvée, renvoyer une erreur 404
+    if (!updatedDemande) {
+      return res.status(404).json({
+        success: false,
+        message: `Aucune demande de transport trouvée avec l'ID : ${id}`,
+      });
+    }
+
+    // 5. Renvoyer une réponse de succès avec les données mises à jour
+    res.status(200).json({
+      success: true,
+      message: "Avis ajouté/modifié avec succès.",
+      data: updatedDemande,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
+
+
+
 exports.createDemandeTransport = async (req, res, next) => {
   try {
     const {
