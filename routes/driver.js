@@ -4,8 +4,67 @@ const Driver = require("../models/Driver");
 const {verifyTokenAny} = require("../middleware/authAny");
 const HistoriquePaiement = require('../models/HistoriquePaiement');
 const Commission = require('../models/Commission');
+const DemandeTransport = require("../models/DemandeTransport");
 
 const router = express.Router();
+
+
+router.get("/:id/rating", verifyTokenAny, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Pipeline d'agrégation pour calculer la note moyenne
+    const pipeline = [
+      {
+        // 1. Filtrer les demandes pour ce chauffeur qui ont une note
+        $match: {
+          id_driver: new mongoose.Types.ObjectId(id),
+          nbstars: { $exists: true, $ne: null }
+        }
+      },
+      {
+        // 2. Grouper les résultats pour faire les calculs
+        $group: {
+          _id: "$id_driver",
+          averageRating: { $avg: "$nbstars" }, // Calcul de la moyenne
+          totalRatings: { $sum: 1 }             // Comptage du nombre d'avis
+        }
+      }
+    ];
+
+    const result = await DemandeTransport.aggregate(pipeline);
+
+    // 3. Renvoyer la réponse
+    if (result.length > 0) {
+      // Si des avis sont trouvés
+      res.status(200).json({
+        success: true,
+        driverId: result[0]._id,
+        averageRating: parseFloat(result[0].averageRating.toFixed(1)), // Moyenne arrondie
+        totalRatings: result[0].totalRatings,
+      });
+    } else {
+      // Si aucun avis n'est trouvé
+      res.status(200).json({
+        success: true,
+        driverId: id,
+        averageRating: 0,
+        totalRatings: 0,
+        message: "Aucun avis trouvé pour ce chauffeur."
+      });
+    }
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors de la récupération de la note.",
+      error: error.message,
+    });
+  }
+});
+
+
+
 
 // Get current Driver's profile
 router.get("/profile", verifyTokenAny, (req, res) => {
