@@ -14,6 +14,7 @@ const {
   getDemandesByDriver,
   getDemandesByStatus,
   updateStatutLivraison,
+  addOrUpdateReview,
 } = require('../controllers/demandeTransportController');
 const {verifyTokenAny} = require("../middleware/authAny");
 
@@ -44,6 +45,7 @@ router.get('/driver/:driverId/traject/:trajectId', verifyTokenAny,getDemandesByD
 router.get('/status/:status', verifyTokenAny,getDemandesByStatus);
 
 ///
-router.put('/:id/status',verifyTokenAny,updateStatutLivraison)
+router.put('/:id/status',verifyTokenAny,updateStatutLivraison);
+router.patch('/:id/avis', addOrUpdateReview);
 
 module.exports = router;
