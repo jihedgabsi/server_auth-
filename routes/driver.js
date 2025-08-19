@@ -5,7 +5,7 @@ const {verifyTokenAny} = require("../middleware/authAny");
 const HistoriquePaiement = require('../models/HistoriquePaiement');
 const Commission = require('../models/Commission');
 const DemandeTransport = require("../models/DemandeTransport");
-
+const mongoose = require("mongoose"); // 🔹 Manquait
 const router = express.Router();
 
 
@@ -13,47 +13,51 @@ router.get("/:id/rating", verifyTokenAny, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Pipeline d'agrégation pour calculer la note moyenne
+    // 1️⃣ Vérifier si le chauffeur existe
+    const driver = await Driver.findById(id);
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: "Chauffeur introuvable",
+      });
+    }
+
+    // 2️⃣ Pipeline d'agrégation sur DemandeTransport
     const pipeline = [
       {
-        // 1. Filtrer les demandes pour ce chauffeur qui ont une note
         $match: {
           id_driver: new mongoose.Types.ObjectId(id),
-          nbstars: { $exists: true, $ne: null }
-        }
+          nbstars: { $exists: true, $ne: null },
+        },
       },
       {
-        // 2. Grouper les résultats pour faire les calculs
         $group: {
           _id: "$id_driver",
-          averageRating: { $avg: "$nbstars" }, // Calcul de la moyenne
-          totalRatings: { $sum: 1 }             // Comptage du nombre d'avis
-        }
-      }
+          averageRating: { $avg: "$nbstars" },
+          totalRatings: { $sum: 1 },
+        },
+      },
     ];
 
     const result = await DemandeTransport.aggregate(pipeline);
 
-    // 3. Renvoyer la réponse
+    // 3️⃣ Renvoyer la réponse
     if (result.length > 0) {
-      // Si des avis sont trouvés
       res.status(200).json({
         success: true,
         driverId: result[0]._id,
-        averageRating: parseFloat(result[0].averageRating.toFixed(1)), // Moyenne arrondie
+        averageRating: parseFloat(result[0].averageRating.toFixed(1)),
         totalRatings: result[0].totalRatings,
       });
     } else {
-      // Si aucun avis n'est trouvé
       res.status(200).json({
         success: true,
         driverId: id,
         averageRating: 0,
         totalRatings: 0,
-        message: "Aucun avis trouvé pour ce chauffeur."
+        message: "Aucun avis trouvé pour ce chauffeur.",
       });
     }
-
   } catch (error) {
     res.status(500).json({
       success: false,
