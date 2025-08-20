@@ -34,6 +34,16 @@ const demandeTransportSchema = new mongoose.Schema({
   default: 'pending',
   required: false,
 },
+  statusLivraisondate: {
+  pending: { type: Date},
+  paye: { type: Date },
+  collecte: { type: Date },
+  aeroport_depart: { type: Date },
+  aeroport_arrivee: { type: Date },
+  en_livraison: { type: Date },
+  livre: { type: Date },
+},
+
 
     portDepart: {
     type: String,
