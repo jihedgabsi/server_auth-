@@ -127,6 +127,62 @@ router.get('/search', verifyTokenAny, async (req, res, next) => {
 });
 
 
+// 🔍 Recherche par port de départ et port d’arrivée
+router.get('/searchByPorts', verifyTokenAny, async (req, res, next) => {
+  try {
+    const { portDepart, portDarriver, date, type } = req.query;
+
+    if (!portDepart || !portDarriver || !date || !type) {
+      return res.status(400).json({
+        message: 'Missing required parameters. Please provide portDepart, portDarriver, date, and type.'
+      });
+    }
+
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      return res.status(400).json({ message: 'Format de date invalide' });
+    }
+
+    // Vérif que la date n’est pas dans le passé
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dateObj < today) {
+      return res.status(400).json({
+        message: 'La date de recherche ne peut pas être dans le passé. Veuillez choisir une date future.'
+      });
+    }
+
+    const dateRangeDays = 15;
+    const startDate = new Date(dateObj);
+    const endDate = new Date(dateObj);
+
+    startDate.setDate(startDate.getDate() - dateRangeDays);
+    endDate.setDate(endDate.getDate() + dateRangeDays);
+
+    const finalStartDate = new Date(Math.max(startDate.getTime(), today.getTime()));
+
+    // 🔎 Construit la requête avec portDepart et portDarriver
+    const query = {
+      portDepart: portDepart,
+      portDarriver: portDarriver,
+      modetransport: type,
+      dateTraject: {
+        $gte: finalStartDate,
+        $lte: endDate
+      }
+    };
+
+    const trajets = await Traject.find(query).sort({ dateTraject: 1 });
+
+    res.status(200).json(trajets);
+  } catch (error) {
+    console.error('SearchByPorts error:', error);
+    next(error);
+  }
+});
+
+
+
 // GET trajet by ID
 router.get('/:id', verifyTokenAny,async (req, res, next) => {
   try {
