@@ -79,6 +79,7 @@ exports.createDemandeTransport = async (req, res, next) => {
       proposerUser,
       id_bagages,
       updateStatutLivraison,
+      modetransport,
     } = req.body;
 
     // Validate baggage IDs
@@ -116,6 +117,7 @@ exports.createDemandeTransport = async (req, res, next) => {
       proposerUser,
       id_bagages,
       updateStatutLivraison,
+      modetransport,
     });
 
     res.status(201).json({
