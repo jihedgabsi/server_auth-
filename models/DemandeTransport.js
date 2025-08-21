@@ -54,7 +54,6 @@ const demandeTransportSchema = new mongoose.Schema({
   },
    modetransport: {
     type: String,
-    required: [true, 'Mode de transport is required'],
     trim: true
   },
     
