@@ -52,6 +52,11 @@ const demandeTransportSchema = new mongoose.Schema({
   portDarriver: {
     type: String,
   },
+   modetransport: {
+    type: String,
+    required: [true, 'Mode de transport is required'],
+    trim: true
+  },
     
   id_traject: {
     
