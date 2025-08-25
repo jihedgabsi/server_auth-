@@ -450,64 +450,7 @@ exports.getDemandesByUser = async (req, res, next) => {
   }
 };
 
-exports.getDemandesByUserStream = async (req, res, next) => {
-  const { userId } = req.params;
 
-  // 1. Configurer les en-têtes pour les Server-Sent Events
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders(); // Envoie les en-têtes immédiatement
-
-  // Fonction pour envoyer la liste à jour à l'utilisateur
-  const sendUpdatedData = async () => {
-    try {
-      console.log(`Fetching updated data for user: ${userId}`);
-      const demandes = await DemandeTransport.find({ id_user: userId })
-        .populate("id_bagages")
-        .populate("id_driver", "nom prenom telephone")
-        .sort({ createdAt: -1 });
-
-      // Formatte les données pour SSE et envoie
-      res.write(`data: ${JSON.stringify(demandes)}\n\n`);
-    } catch (error) {
-      console.error("Error sending data to client:", error);
-    }
-  };
-
-  // 2. Envoyer la liste complète une première fois
-  sendUpdatedData();
-
-  // 3. Écouter les changements sur la collection DemandeTransport
-  const changeStream = DemandeTransport.watch();
-
-  changeStream.on("change", (change) => {
-    // On vérifie si le changement concerne l'utilisateur connecté
-    // Pour un 'insert' ou 'update', on peut vérifier le document complet
-    if (
-      change.operationType === "insert" ||
-      change.operationType === "update"
-    ) {
-      if (change.fullDocument.id_user.toString() === userId) {
-        console.log("Relevant change detected, sending update.");
-        sendUpdatedData(); // Renvoyer la liste complète et à jour
-      }
-    } else if (change.operationType === "delete") {
-      // Pour une suppression, c'est plus complexe.
-      // Une solution simple est de renvoyer la liste à jour à tous les clients connectés.
-      // Pour optimiser, il faudrait connaître l'id_user du document supprimé.
-      console.log("A document was deleted, sending update.");
-      sendUpdatedData();
-    }
-  });
-
-  // 4. Gérer la déconnexion du client
-  req.on("close", () => {
-    console.log(`Client disconnected for user: ${userId}, closing stream.`);
-    changeStream.close();
-    res.end();
-  });
-};
 
 // @desc    Get demandes by driver ID
 // @route   GET /api/demandes-transport/driver/:driverId
