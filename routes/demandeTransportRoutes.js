@@ -15,7 +15,7 @@ const {
   getDemandesByStatus,
   updateStatutLivraison,
   addOrUpdateReview,
-  getDemandesByUserStream,
+  
 } = require('../controllers/demandeTransportController');
 const {verifyTokenAny} = require("../middleware/authAny");
 
@@ -41,7 +41,6 @@ router.put('/:id/propose-price', proposePriceUser);
 
 // Filter routes
 router.get('/user/:userId', verifyTokenAny,getDemandesByUser);
-router.get("/user/:userId/stream", getDemandesByUserStream);
 router.get('/driver/:driverId', verifyTokenAny,getDemandesByDriver);
 router.get('/driver/:driverId/traject/:trajectId', verifyTokenAny,getDemandesByDriveretidtraject);
 router.get('/status/:status', verifyTokenAny,getDemandesByStatus);
